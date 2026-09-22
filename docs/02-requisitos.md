@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **ALUNO** | Alex Oliveira · Disciplina: Computação Aplicada à Educação |
-| **VERSÃO** | 1.1 |
+| **VERSÃO** | 1.2 |
 | **DOCUMENTOS RELACIONADOS** | Documentação do Projeto · Modelo de Entidades e Relacionamentos |
 
 ---
@@ -102,13 +102,15 @@ O sistema deve exibir enunciado, teste de exemplo e código com defeito.
 - **Dado** um exercício aberto, **quando** a tela carregar, **então** exibe o teste de exemplo com chamada, entrada e resultado esperado.
 - **Dado** um exercício aberto, **quando** a tela carregar, **então** exibe `codigo_com_defeito` numerado por linha.
 - **Dado** qualquer resposta enviada ao navegador durante a tentativa, **quando** for inspecionada, **então** não contém `suite_oculta`, `codigo_correto`, `linha_defeito` nem `categoria_codigo`.
+- **Dado** um exercício aberto, **quando** a tela carregar, **então** o código, o enunciado e o teste de exemplo chegam exclusivamente pela resposta de `POST /api/tentativa`, que devolve apenas o exercício da tentativa aberta daquele aluno (D-20).
+- **Dado** o cliente consultando o banco diretamente, **quando** tentar ler `codigo_com_defeito` de qualquer exercício, **então** a leitura é negada: não existe view nem grant que exponha o código dos exercícios (D-20).
 
 #### RF-07 · Localização do defeito
 *Prioridade: Obrigatório · Regras: RN-01 · Entidades: E-05, E-07, E-08*
 
 O sistema deve bloquear a edição até que o aluno aponte a linha, com no máximo duas tentativas.
 
-- **Dado** um exercício recém-aberto, **quando** a tela carregar, **então** o editor está em somente leitura e os botões Precheck, Verificar e Dica estão desabilitados.
+- **Dado** um exercício recém-aberto, **quando** a tela carregar, **então** o editor está em somente leitura e os botões Precheck, Verificar e Dica estão desabilitados; Desistir permanece disponível (D-17).
 - **Dado** o editor bloqueado, **quando** o cursor passar sobre uma linha, **então** a linha recebe destaque indicando que é clicável.
 - **Dado** o editor bloqueado, **quando** o aluno clicar numa linha, **então** a comparação com `linha_defeito` é feita no servidor e a resposta informa apenas se estava correta.
 - **Dado** um acerto na 1ª tentativa, **quando** for registrado, **então** o editor é liberado e o fator de localização é 1,0.
@@ -124,7 +126,7 @@ O sistema deve bloquear a edição até que o aluno aponte a linha, com no máxi
 O sistema deve permitir editar o código após a liberação, contando as linhas alteradas.
 
 - **Dado** o editor liberado, **quando** o aluno digitar, **então** a alteração é aceita com realce de sintaxe Python.
-- **Dado** o aluno editando, **quando** a contagem de linhas alteradas mudar, **então** o contador exibido é atualizado.
+- **Dado** o aluno editando, **quando** a contagem de linhas alteradas mudar, **então** o contador exibido é atualizado. A contagem compara o editor com `codigo_com_defeito`, linha a linha: cada linha modificada, inserida ou removida conta 1.
 - **Dado** mais de 3 linhas alteradas, **quando** o limite for ultrapassado, **então** o contador recebe destaque de alerta, sem bloquear a edição nem alterar a pontuação.
 - **Dado** o aluno acionando Precheck, Verificar ou Encerrar, **quando** a ação for processada, **então** um evento `editou` é gravado antes dela, com o código atual e o número de linhas alteradas (RN-12).
 
@@ -136,7 +138,8 @@ O sistema deve executar o teste de exemplo no navegador, sem custo de pontuaçã
 - **Dado** o editor liberado e menos de 3 prechecks usados, **quando** o aluno acionar Precheck, **então** o código roda contra o teste de exemplo no navegador e o resultado é exibido.
 - **Dado** um precheck que falha, **quando** o resultado for exibido, **então** mostra entrada, valor esperado e valor obtido.
 - **Dado** um precheck concluído, **quando** o resultado voltar, **então** a pontuação exibida não se altera.
-- **Dado** um código que ultrapassa 2 segundos, **quando** o limite for atingido, **então** o worker é encerrado, o sistema informa tempo excedido e o uso é contabilizado (D-10).
+- **Dado** um código cuja execução ultrapassa 2 segundos, contados a partir do despacho a um worker já inicializado, **quando** o limite for atingido, **então** o worker é encerrado, o sistema informa tempo excedido e o uso é contabilizado (D-10).
+- **Dado** o Pyodide ainda em carga, **quando** o aluno acionar Precheck, **então** o sistema mostra "preparando o ambiente" e o uso não é consumido.
 - **Dado** 3 usos consumidos, **quando** a tela for renderizada, **então** o botão aparece desabilitado com o contador em 3/3.
 - **Dado** qualquer precheck, **quando** for concluído, **então** um evento `precheck` é gravado com `resultado` entre `passou`, `falhou`, `tempo_excedido` e `erro`, e o número do uso.
 
@@ -186,9 +189,10 @@ O sistema deve oferecer três níveis de dica, com liberação condicionada e cu
 
 O sistema deve permitir encerrar a tentativa sem resolver, zerando a pontuação.
 
-- **Dado** um exercício em andamento, **quando** o aluno acionar Desistir, **então** o sistema pede confirmação explícita.
+- **Dado** uma tentativa aberta, em qualquer estado — inclusive com o editor travado —, **quando** o aluno acionar Desistir, **então** o sistema pede confirmação explícita (D-17).
 - **Dado** a confirmação, **quando** for aceita, **então** um evento `editou` e um evento `encerrou` com `desfecho = 'desistiu'` são gravados, e a tentativa fecha com `pdr_final = 0`.
 - **Dado** uma tentativa encerrada por desistência, **quando** o aluno tentar retomá-la, **então** o sistema recusa e oferece iniciar nova tentativa.
+- **Dado** uma desistência sem nenhum evento `localizou`, **quando** o PDR for calculado, **então** `calcularPdr` não falha, usa fator de localização 0,3 e o resultado gravado é `pdr_final = 0` (D-17).
 
 #### RF-14 · Cálculo e exibição da pontuação
 *Prioridade: Obrigatório · Regras: RN-05 · Entidades: E-03, E-05, E-07, E-08*
@@ -199,6 +203,7 @@ O sistema deve calcular o PDR a partir dos eventos e exibi-lo em tempo real.
 - **Dado** o painel de pontuação, **quando** for exibido, **então** mostra a base e, em linhas separadas, o efeito percentual de cada componente: localização, reparo e dica.
 - **Dado** uma tentativa encerrada, **quando** o encerramento for gravado, **então** `pdr_final` recebe o resultado de `calcularPdr(eventos, {base, numero_tentativa})`.
 - **Dado** os eventos de uma tentativa encerrada, **quando** `calcularPdr` for reexecutada com os mesmos argumentos, **então** produz exatamente o valor gravado.
+- **Dado** um cálculo cujo valor tem parte fracionária exatamente 0,5, **quando** for arredondado, **então** arredonda para cima: 42,5 → 43 (D-16).
 - **Dado** o PDR acumulado, **quando** for consultado, **então** resulta da soma dos `pdr_final`, sem coluna de total acumulado.
 
 #### RF-15 · Feedback final gerado por IA
@@ -279,7 +284,7 @@ Toda ação relevante deve gerar um registro imutável, gravado pelo servidor.
 | RF-10 | 5 Exercício liberado | RN-03 | E-04, E-05, E-08 |
 | RF-11 | — | RN-03 | — |
 | RF-12 | 4 travado, 5 liberado | RN-04 | E-03, E-06, E-08 |
-| RF-13 | 5 Exercício liberado | RN-06 | E-07, E-08 |
+| RF-13 | 4 travado, 5 liberado | RN-06 | E-07, E-08 |
 | RF-14 | 4, 5, 6, 7 | RN-05 | E-03, E-05, E-07, E-08 |
 | RF-15 | 7 Feedback | — | E-04, E-05, E-07, E-08 |
 | RF-16 | 7 Feedback | RN-07, RN-11 | E-07 |

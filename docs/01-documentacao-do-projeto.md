@@ -7,7 +7,7 @@
 | **ALUNO** | Alex Oliveira |
 | **DISCIPLINA** | Computação Aplicada à Educação |
 | **ÁREAS DE PESQUISA** | Inteligência Artificial na Educação · Gamificação e Jogos Digitais na Educação |
-| **VERSÃO DO DOCUMENTO** | 1.1 |
+| **VERSÃO DO DOCUMENTO** | 1.2 |
 | **DOCUMENTOS RELACIONADOS** | Documento de Requisitos · Modelo de Entidades e Relacionamentos |
 
 ---
@@ -77,6 +77,8 @@ Se travar, pode pedir até três dicas, cada uma revelando mais e custando mais 
 │ │    └─ falhou → fator de reparo −0,25                  │
 │ │               e libera as dicas 2 e 3                 │
 │ └─ Desistir → PDR = 0                                   │
+│                                                         │
+│ Desistir está disponível nos dois estados (D-17).       │
 └─────────────────────────────────────────────────────────┘
      │
      ▼
@@ -110,8 +112,8 @@ Cada categoria pertence a exatamente um nível de dificuldade, e o nível define
 | CÓDIGO | NOME | NÍVEL | MUTAÇÃO APLICADA |
 |---|---|---|---|
 | `CMP_INV` | comparador invertido | baixo | `<` ↔ `<=` , `>` ↔ `>=` |
-| `ARIT_TROC` | operador aritmético trocado | baixo | `+`↔`-`, `*`↔`/` |
-| `LACO_DESL` | limite de laço deslocado | médio | `range(n)` → `range(n-1)` |
+| `ARIT_TROC` | operador aritmético trocado | baixo | `+`↔`-`, `*`↔`/`, também em `+=`, `-=`, `*=`, `/=` (D-19) |
+| `LACO_DESL` | limite de laço deslocado | médio | subtrai 1 do `stop`: `range(n)` → `range(n-1)`, `range(a, b)` → `range(a, b-1)`; o passo nunca é tocado (D-18) |
 | `ACUM_AUSENTE` | acumulador não atualizado | médio | remove a atribuição que atualiza o acumulador |
 
 ### 3.3 Catálogo de programas-base
@@ -146,7 +148,7 @@ São 13 combinações de programa e categoria. Como um mesmo programa pode ter m
 │                                                              │
 │ GET /login · /temas · /temas/[tema] · /exercicio/[id]        │
 │                                                              │
-│ POST /api/tentativa      inicia ou retoma a tentativa        │
+│ POST /api/tentativa      inicia ou retoma; devolve o exercício│
 │ POST /api/localizar      registra a linha apontada           │
 │ POST /api/editou         registra o código submetido         │
 │ POST /api/precheck       registra o resultado do cliente     │
@@ -214,12 +216,17 @@ O editor de código inicia bloqueado. O aluno dispõe de duas tentativas de loca
 | acertou na 1ª tentativa | 1,0 | editor destrava |
 | errou a 1ª, acertou na 2ª | 0,6 | editor destrava |
 | errou as duas | 0,3 | editor destrava automaticamente |
+| não localizou (desistiu antes de localizar) | 0,3 | — |
+
+A última linha existe para que o cálculo do PDR não quebre quando a tentativa é encerrada por desistência sem evento `localizou` (D-17). Não afeta a nota, porque a desistência zera o PDR.
 
 A linha correta é `exercicios.linha_defeito`. A comparação é feita no servidor — o cliente envia a linha clicada e recebe apenas "correta" ou "incorreta".
 
 ### RN-02 · Precheck
 
 Executa exclusivamente o teste de exemplo, no navegador, com limite de 2 segundos. Limitado a 3 usos por tentativa, contando também as execuções que estouram o tempo. Não altera a pontuação. Após o terceiro uso, o botão fica desabilitado.
+
+O limite de 2 segundos conta só a execução. O Pyodide é carregado uma vez, no carregamento da página, e o worker é mantido vivo; o relógio começa quando o código é despachado a um worker já inicializado. Se a carga ainda estiver em andamento quando o aluno clicar, o sistema mostra "preparando o ambiente" e o uso não é consumido.
 
 ### RN-03 · Verificar
 
@@ -254,12 +261,12 @@ PDR = base × (0,4 × fator_localização + 0,6 × fator_reparo)
 | COMPONENTE | ORIGEM |
 |---|---|
 | `base` | 100 se o nível da categoria é baixo, 200 se é médio |
-| `fator_localização` | eventos `localizou`, conforme RN-01 |
+| `fator_localização` | eventos `localizou`, conforme RN-01; 0,3 na ausência deles (D-17) |
 | `fator_reparo` | inicia em 1,0; −0,25 por evento `verificar` sem sucesso; piso 0 |
 | `multiplicador_dica` | maior nível de evento `dica`, conforme RN-04 |
 | `multiplicador_repeticao` | 1,0 se `numero_tentativa` é 1; 0,5 se maior |
 
-O resultado é arredondado para o inteiro mais próximo.
+O resultado é arredondado para o inteiro mais próximo, com empate sempre para cima (meio-para-cima): 42,5 → 43 (D-16). Atenção a portes para Python: `round()` do Python faz arredondamento bancário (`round(42.5) == 42`); use `math.floor(x + 0.5)`.
 
 **Assinatura da função de cálculo.** Três dos cinco componentes vêm dos eventos; `base` e `multiplicador_repeticao` não. A função é, portanto:
 
@@ -286,17 +293,21 @@ PDR = 200 × (0,4 × 0,6 + 0,6 × 0,75) × 0,85 × 1,0
 
 Ao desistir, a tentativa é encerrada com desfecho `desistiu` e `pdr_final = 0`. A ação exige confirmação explícita e é irreversível para aquela tentativa.
 
+Desistir está disponível desde o início da tentativa, inclusive com o editor travado (D-17). Bloquear criaria um beco sem saída: como a tentativa aberta não expira, a única fuga seria fechar a aba e voltar sempre para a mesma. O placar já desencoraja o abuso — desistir dá PDR 0 e refazer vale metade, então desistir para ver o gabarito e refazer rende no máximo 50% do que resolver direto.
+
 ### RN-07 · Repetição de exercício
 
 Um exercício pode ser tentado quantas vezes o aluno quiser. Toda tentativa após a primeira aplica `multiplicador_repeticao = 0,5`, independentemente do desfecho da anterior.
 
 ### RN-08 · Limite de edição
 
-O sistema conta as linhas alteradas em relação ao código original e exibe o contador, com alerta visual acima de 3 linhas. Na v1 o limite é informativo: não bloqueia nem penaliza. O número é registrado no evento `editou`.
+O sistema conta as linhas alteradas em relação ao código original — o `codigo_com_defeito` que o aluno recebeu, nunca o `codigo_correto` — e exibe o contador, com alerta visual acima de 3 linhas. Na v1 o limite é informativo: não bloqueia nem penaliza. O número é registrado no evento `editou`.
+
+A contagem é um diff linha a linha: cada linha modificada, inserida ou removida conta 1.
 
 ### RN-09 · Seleção do próximo exercício
 
-Dentro de um tema e nível, na ordem:
+Dentro de um tema e nível, considerando apenas exercícios com `ativo = true` (D-21), na ordem:
 
 1. Se houver tentativa com desfecho `aberto`, retomá-la (RN-10).
 2. Senão, o exercício não resolvido de menor `ordem`.
@@ -338,9 +349,6 @@ para cada programa_base P:
             se não compila(candidato):
                 descartar
 
-            se passa(candidato, P.teste_exemplo) é falso:
-                descartar                             # violaria o critério 4
-
             se todos_passam(candidato, P.suite_oculta):
                 descartar                             # mutação inócua
 
@@ -353,17 +361,24 @@ para cada programa_base P:
                 linha_defeito      = linha,
                 mutador_versao     = MUTADOR_VERSAO)
 
-atribuir ordem: 1, 2, 3... percorrendo os exercícios gravados
-                ordenados por (tema, nivel, nome_funcao, categoria, ocorrencia)
+atribuir ordem: dentro de cada nível, permutação pseudoaleatória
+                com semente fixa dos exercícios gravados (D-20)
+
+marcar ativo = false os exercícios de versões anteriores de MUTADOR_VERSAO
+                (não são apagados; D-21)
 ```
 
-Três detalhes que parecem menores e não são:
+Detalhes que parecem menores e não são:
 
 **A comparação é sempre contra o código canônico, nunca contra o texto-fonte original.** `ast.unparse` normaliza aspas, parênteses, espaçamento e descarta comentários. Comparar o mutado com o fonte original faria a primeira divergência cair na linha 1 quase sempre — e `linha_defeito` é a verdade fundamental do diagnóstico. É por isso que `programas_base.codigo_correto` armazena a forma canônica, não o texto como foi digitado.
 
 **A verificação de compilação vem antes de rodar os testes.** Um candidato que nem carrega não tem resultado de teste a consultar.
 
 **O identificador é derivado por uuid5 de uma chave natural, não sorteado.** Rodar o pipeline duas vezes produz os mesmos identificadores, o que torna a carga idempotente e satisfaz o requisito de reprodutibilidade.
+
+**A `ordem` é embaralhada, com semente fixa.** Uma ordem derivada de (tema, nível, função, categoria, ocorrência) revelaria o agrupamento por programa-base e por categoria a quem observasse a sequência. A permutação com semente fixa esconde esse agrupamento e continua reprodutível (RNF-08).
+
+**Uma versão nova de mutador não apaga exercícios antigos.** Como `mutador_versao` entra na chave do uuid5, regerar com versão nova produz identificadores novos. Os antigos são marcados `ativo = false`, o que preserva as tentativas históricas que os referenciam.
 
 ### 6.2 Especificação dos mutadores
 
@@ -372,9 +387,15 @@ Cada mutador recebe um parâmetro `alvo` e altera exatamente o n-ésimo nó eleg
 | CÓDIGO | NÓ ELEGÍVEL | TRANSFORMAÇÃO |
 |---|---|---|
 | `CMP_INV` | `ast.Compare` | primeiro operador: `Lt` ↔ `LtE` , `Gt` ↔ `GtE` |
-| `ARIT_TROC` | `ast.BinOp` | `Add` ↔ `Sub` , `Mult` ↔ `Div` |
-| `LACO_DESL` | `ast.Call` a `range` | subtrai 1 do último argumento |
+| `ARIT_TROC` | `ast.BinOp` ou `ast.AugAssign` | `Add` ↔ `Sub` , `Mult` ↔ `Div`, sobre o operador do nó |
+| `LACO_DESL` | `ast.Call` a `range` | subtrai 1 do argumento `stop`: índice 0 se o `range` tem um argumento, índice 1 se tem dois ou três |
 | `ACUM_AUSENTE` | `ast.AugAssign` ou `ast.Assign` dentro de laço | remove o nó |
+
+Regras complementares:
+
+- **`LACO_DESL`** escolhe o argumento pela aridade: `alvo = 0 if len(node.args) == 1 else 1`. O passo nunca é tocado. A operação é sempre "subtrair 1", sem ramo pelo sinal do passo: com passo positivo o laço roda uma vez a menos; com passo negativo, uma a mais. Os dois são deslocamento de limite (D-18). Por isso os textos de dica de `LACO_DESL` são neutros quanto à direção.
+- **`ARIT_TROC`** percorre `ast.BinOp` e `ast.AugAssign` numa travessia única e determinística, contando ambos na mesma sequência de ocorrências. Contagens separadas tornariam o parâmetro `alvo` instável entre execuções e quebrariam a idempotência do uuid5 (D-19).
+- **O mesmo nó pode ser elegível para duas categorias.** Um `ast.AugAssign` dentro de laço é elegível para `ARIT_TROC` e para `ACUM_AUSENTE`. Isso é intencional e gera dois exercícios diferentes.
 
 Implementação de referência, com a contagem de ocorrências:
 
@@ -402,9 +423,14 @@ Um candidato só vira exercício se satisfizer todos os itens:
 
 1. O código mutado difere do canônico.
 2. O código mutado compila.
-3. O código mutado passa no teste de exemplo. Um exercício resolvível apenas com o Precheck anularia a distinção entre os dois botões. Quando a mutação quebra o teste de exemplo, o candidato é descartado — não se troca o teste, para que todos os exercícios do mesmo programa-base mostrem o mesmo exemplo.
-4. O código mutado falha em ao menos um teste da suíte oculta.
-5. Exatamente um nó da árvore foi alterado. O critério é sobre o nó, não sobre linhas de texto: `ACUM_AUSENTE` remove uma linha e desloca todas as seguintes, o que é esperado e não invalida o exercício.
+3. O código mutado falha em ao menos um teste da suíte oculta.
+4. Exatamente um nó da árvore foi alterado. O critério é sobre o nó, não sobre linhas de texto: `ACUM_AUSENTE` remove uma linha e desloca todas as seguintes, o que é esperado e não invalida o exercício.
+
+Não se exige que o código mutado passe no teste de exemplo (D-12). Um candidato que quebra o exemplo é válido; o exemplo não é trocado, para que todos os exercícios do mesmo programa-base mostrem o mesmo exemplo.
+
+**Regra de autoria, verificada na S1-08.** Toda suíte oculta contém ao menos um caso de borda não coberto pelo teste de exemplo. É isso que garante que passar no Precheck não garante passar no Verificar — a distinção entre os dois botões é propriedade de como os testes são escritos, não filtro sobre cada mutação. O Precheck, além disso, fica desabilitado enquanto o editor está travado (RF-07), e portanto não ajuda na localização.
+
+**Propriedade desejável do banco.** Exercícios cujo defeito passa no exemplo e só aparece na borda — como `conta_aprovados` com `CMP_INV` — são os mais valiosos, porque ensinam que o teste visível não prova nada. O pipeline reporta quantos exercícios têm essa característica.
 
 Para `ACUM_AUSENTE`, `linha_defeito` aponta a linha imediatamente anterior ao ponto da remoção no código mutado, que é onde o aluno precisa olhar para perceber a falta.
 
@@ -472,10 +498,18 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-09 | Verificar com tempo excedido | conta como sem sucesso: −0,25 e libera dicas | não penalizar |
 | D-10 | Precheck com tempo excedido | consome um dos 3 usos | não consumir |
 | D-11 | Mutação por ocorrência | um exercício por nó elegível | um exercício por par programa-categoria |
-| D-12 | Teste de exemplo quebrado pela mutação | descarta o candidato | trocar o teste de exemplo |
+| D-12 | Teste de exemplo quebrado pela mutação | o candidato é válido: não se descarta nem se troca o exemplo. A distinção entre Precheck e Verificar é garantida por regra de autoria — a suíte oculta contém ao menos um caso de borda fora do exemplo | exigir que o defeito preserve o exemplo, o que reduziria o banco a 3–6 exercícios e dependeria de sorte na escolha do exemplo |
 | D-13 | Identificadores dos exercícios | uuid5 de chave natural, idempotente | `gen_random_uuid()` |
 | D-14 | Programas-base | entidade própria, com o tema | replicados em cada exercício |
 | D-15 | Evento de encerramento | tipo único `encerrou` com o desfecho | `desistiu` mais inferência |
+| D-16 | Arredondamento do PDR | meio-para-cima; 42,5 → 43. Em contexto educacional o empate favorece o aluno | arredondamento bancário |
+| D-17 | Desistir com o editor travado | disponível desde o início; na ausência de evento `localizou` o fator de localização é 0,3. Bloquear criaria um beco sem saída, e o placar já torna a desistência estritamente dominada | exigir localização antes de poder sair |
+| D-18 | Alvo do `LACO_DESL` | o argumento `stop`, escolhido pela aridade do `range`, sempre com subtração de 1. É o limite que a categoria descreve | o último argumento posicional, que em `range` de 3 argumentos é o passo |
+| D-19 | Escopo do `ARIT_TROC` | aceita `ast.AugAssign` além de `ast.BinOp`. `contador += 1` é como código real se escreve | escrever os programas-base na forma `x = x + 1` para caber no mutador |
+| D-20 | Entrega do código do exercício | só pela resposta de `/api/tentativa`; a view `exercicios_publicos` é removida; as contagens vêm por agregados; a `ordem` é embaralhada com semente fixa. Com todos os códigos em mãos, comparar os irmãos de um programa-base reconstruiria o código correto e a linha do defeito | manter a view e registrar o vazamento como limitação |
+| D-21 | Versionamento dos exercícios | coluna `ativo` com índice único parcial sobre `ordem`, substituindo a unicidade global. Versões antigas são desativadas, não apagadas, preservando as tentativas históricas | `ordem` única para sempre, que colide quando `mutador_versao` muda |
+
+D-12 foi revista e D-16 a D-21 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
 
 ## 10. Riscos
 

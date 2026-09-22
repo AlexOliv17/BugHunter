@@ -6,7 +6,7 @@
 |---|---|
 | **ALUNO / PRODUCT OWNER** | Alex Oliveira |
 | **EXECUTOR** | agente de implementação |
-| **VERSÃO** | 1.0 |
+| **VERSÃO** | 1.1 |
 | **DOCUMENTOS RELACIONADOS** | Documentação do Projeto · Documento de Requisitos · Modelo de Entidades e Relacionamentos |
 
 ---
@@ -66,7 +66,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 
 | # | ATIVIDADE | REF. | H | ◆ |
 |---|---|---|---|---|
-| S0-01 | Criar repositório com `/app` (Next.js, TypeScript), `/pipeline` (Python) e `/docs` com os três documentos | — | 1 | |
+| S0-01 | Criar repositório com `/app` (Next.js, TypeScript), `/pipeline` (Python) e `/docs` com os quatro documentos | — | 1 | |
 | S0-02 | Receber credenciais do Supabase e da API do modelo; configurar variáveis de ambiente local e na Vercel | — | 1 | ◆ insumo |
 | S0-03 | Publicar a aplicação vazia na Vercel e confirmar conexão com o Supabase | — | 1 | ◆ validação |
 | S0-04 | Spike rota A: endpoint Python na Vercel executando subprocess com `env={}` e timeout | RN-03, RF-11 | 2 | |
@@ -78,22 +78,22 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 
 ## 3. Sprint 1 · Banco de dados e catálogo de exercícios
 
-**Objetivo:** banco criado, protegido e populado com exercícios reais. **Entregável:** entre 15 e 25 exercícios no banco, gerados por um pipeline que roda duas vezes sem duplicar nada.
+**Objetivo:** banco criado, protegido e populado com exercícios reais. **Entregável:** meta de 15 a 25 exercícios no banco, piso de 12, gerados por um pipeline que roda duas vezes sem duplicar nada.
 
 | # | ATIVIDADE | REF. | H | ◆ |
 |---|---|---|---|---|
 | S1-01 | Migration 001 — tabelas de catálogo: `temas`, `categorias_defeito`, `programas_base`, `exercicios`, `dicas` | E-02 a E-06 | 1 | |
 | S1-02 | Migration 002 — tabelas operacionais: `usuarios`, `tentativas`, `eventos`, com constraints e índices | E-01, E-07, E-08 | 1 | |
-| S1-03 | Migration 003 — views `temas_publicos` e `exercicios_publicos`, `revoke` / `grant`, políticas de RLS | RNF-03, RNF-04 | 1,5 | |
-| S1-04 | Teste de segurança do banco: com uma sessão de aluno comum, tentar ler `dicas`, `exercicios`, `programas_base` e escrever em `tentativas` e `eventos`. Todas devem falhar | RNF-03, RNF-04 | 1 | ◆ validação |
+| S1-03 | Migration 003 — view `temas_publicos`, funções de agregado `progresso_por_tema` e `niveis_do_tema`, `revoke` / `grant`, políticas de RLS | RNF-03, RNF-04 | 1,5 | |
+| S1-04 | Teste de segurança do banco: com uma sessão de aluno comum, tentar ler `dicas`, `exercicios`, `programas_base` e escrever em `tentativas` e `eventos`. Todas devem falhar. As funções de agregado devolvem só contagens e nomes de categoria por nível, nunca código nem categoria por exercício | RNF-03, RNF-04 | 1 | ◆ validação |
 | S1-05 | Seed de `temas` (4 linhas, só `fundamentos` ativa) e `categorias_defeito` (4 linhas) | E-02, E-03 | 0,5 | |
 | S1-06 | Seed de `dicas` — os 12 textos, fornecidos pelo P.O. | E-06, RN-04 | 0,5 | ◆ insumo |
 | S1-07 | Estrutura do `/pipeline`: carregador dos programas-base, executor de suíte, gravação no Supabase | RNF-08 | 2 | |
-| S1-08 | Os 5 programas-base com `descricao`, `teste_exemplo` e `suite_oculta`, revisados pelo P.O. | E-04 | 2 | ◆ validação |
+| S1-08 | Os 5 programas-base com `descricao`, `teste_exemplo` e `suite_oculta`, revisados pelo P.O. Cada suíte oculta contém ao menos um caso de borda não coberto pelo exemplo | E-04, Doc. Projeto §6.3 | 2 | ◆ validação |
 | S1-09 | Os 4 mutadores com o parâmetro `alvo`, alterando exatamente o n-ésimo nó elegível | Doc. Projeto §6.2 | 2 | |
-| S1-10 | Validação dos 5 critérios e cálculo de `linha_defeito` contra a forma canônica | Doc. Projeto §6.3 | 1,5 | |
-| S1-11 | Carga idempotente: uuid5 de chave natural, atribuição de `ordem`, segunda execução não duplica | RNF-08 | 1 | |
-| S1-12 | Revisão do conteúdo gerado: o P.O. lê os exercícios um a um e confirma que cada `linha_defeito` está correta | — | 1 | ◆ validação |
+| S1-10 | Validação dos 4 critérios e cálculo de `linha_defeito` contra a forma canônica | Doc. Projeto §6.3 | 1,5 | |
+| S1-11 | Carga idempotente: uuid5 de chave natural, atribuição de `ordem` por permutação com semente fixa dentro do nível, desativação de versões anteriores, segunda execução não duplica | RNF-08, D-20, D-21 | 1 | |
+| S1-12 | Revisão do conteúdo gerado: o P.O. lê os exercícios um a um e confirma que cada `linha_defeito` está correta. O relatório informa quantos exercícios passam no teste de exemplo e só falham na borda | — | 1 | ◆ validação |
 
 **Critério de saída da S1:** o P.O. conferiu manualmente que a linha marcada como defeito é de fato a linha do defeito em todos os exercícios. Esta é a verificação mais importante do projeto inteiro — se ela falhar, o produto mede a coisa errada.
 
@@ -138,7 +138,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 |---|---|---|---|---|
 | S4-01 | Endpoint de execução da suíte oculta, na rota decidida na S0, com limite de 5 segundos e ambiente sem credenciais | RF-10, RF-11 | 3 | |
 | S4-02 | `/api/verificar`: executa, grava o evento `verificar`, e grava `encerrou` quando tudo passa | RF-10, RN-03 | 2 | |
-| S4-03 | `calcularPdr(eventos, {base, numero_tentativa})` como função pura, com suíte de testes unitários cobrindo os cinco componentes e o exemplo trabalhado que resulta em 117 | RF-14, RN-05 | 2,5 | ◆ validação |
+| S4-03 | `calcularPdr(eventos, {base, numero_tentativa})` como função pura, com suíte de testes unitários cobrindo os cinco componentes, o exemplo trabalhado que resulta em 117, o empate 42,5 → 43 (D-16) e a ausência de evento `localizou` (D-17) | RF-14, RN-05 | 2,5 | ◆ validação |
 | S4-04 | Painel de pontuação ao vivo, discriminando o efeito de localização, reparo e dica | RF-14 | 2 | |
 | S4-05 | `/api/dica` verificando a condição de liberação antes de responder | RF-12, RN-04 | 1,5 | |
 | S4-06 | Interface das dicas nos três estados: indisponível com motivo, disponível com custo, usada com texto | RF-12 | 2 | |
@@ -157,7 +157,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 | S5-03 | Feedback de reserva e tratamento de falha, sem bloquear o encerramento | RF-15 | 1 | |
 | S5-04 | `/api/gabarito/[tentativa_id]` com as duas condições: pertence ao solicitante e está encerrada | RF-15, RNF-03 | 1 | |
 | S5-05 | Tela de feedback final com plantado, correto e submetido lado a lado | RF-15 | 2,5 | ◆ validação |
-| S5-06 | Desistência com confirmação explícita e irreversibilidade | RF-13, RN-06 | 1 | |
+| S5-06 | Desistência com confirmação explícita e irreversibilidade, disponível também com o editor travado | RF-13, RN-06, D-17 | 1 | |
 | S5-07 | Refazer exercício com `numero_tentativa` incrementado e multiplicador 0,5 | RF-16, RN-07 | 1,5 | |
 
 **Critério de saída da S5:** o P.O. desiste de um exercício, lê o feedback e considera que ele explica de fato onde o raciocínio falhou. Desligar a chave da API do modelo faz aparecer o feedback de reserva, sem erro na tela.
@@ -245,7 +245,7 @@ Os três primeiros itens bloqueiam o início. Os demais bloqueiam a sprint 1.
 | RISCO | SINAL DE ALERTA | RESPOSTA |
 |---|---|---|
 | Nenhuma rota do Verificar funciona | S0-07 sem recomendação viável | adotar plano C e registrar como limitação |
-| Pipeline gera menos de 12 exercícios | S1-12 com poucos itens | acrescentar programas-base, não relaxar critérios |
+| Pipeline fora da meta de 15–25 exercícios (piso 12) | S1-12 com menos de 12 itens | acrescentar programas-base, não relaxar critérios |
 | `linha_defeito` errada em algum exercício | S1-12 | parar; o cálculo contra a forma canônica é obrigatório |
 | Escopo crescendo durante a implementação | atividades fora da lista | o P.O. recusa; mudança de escopo exige revisar os documentos |
 | Segredo vazando ao cliente | S1-04, S3-08 ou S6-02 falhando | bloqueia a entrega até ser corrigido |

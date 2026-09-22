@@ -5,7 +5,7 @@
 | | |
 |---|---|
 | **ALUNO** | Alex Oliveira · Disciplina: Computação Aplicada à Educação |
-| **VERSÃO** | 1.1 · SGBD: PostgreSQL 15 (Supabase) |
+| **VERSÃO** | 1.2 · SGBD: PostgreSQL 15 (Supabase) |
 | **DOCUMENTOS RELACIONADOS** | Documentação do Projeto · Documento de Requisitos |
 
 ---
@@ -66,6 +66,7 @@ E-03 · categorias_defeito    E-05 · exercicios          1 ──── N    in
   catálogo · 4 linhas na v1    codigo_com_defeito                   │ 1
      │ 1                       linha_defeito ●                      │
      │                         mutador_versao                       │ N
+     │                         ativo                                │
      │ 3                                                         E-08 · eventos
 E-06 · dicas                                                        id PK
   categoria_codigo PK FK                                            tentativa_id FK
@@ -141,10 +142,11 @@ Gerada pelo pipeline. Cada linha é um programa-base com exatamente um nó da á
 | `id` | uuid PK | não | uuid5 de chave natural; estável entre execuções |
 | `programa_base_id` | uuid FK | não | referencia `programas_base.id` |
 | `categoria_codigo` | text FK | não | referencia `categorias_defeito.codigo`; **é segredo** |
-| `ordem` | integer | não | sequência de apresentação (RN-09); único |
+| `ordem` | integer | não | sequência de apresentação (RN-09); permutação com semente fixa dentro do nível (D-20); única entre os exercícios ativos |
 | `codigo_com_defeito` | text | não | o que o aluno vê no editor |
 | `linha_defeito` | integer | não | 1-indexado; verdade fundamental do diagnóstico |
 | `mutador_versao` | text | não | versão do pipeline que gerou (RNF-08) |
+| `ativo` | boolean | não | padrão `true`; `false` para exercícios de versões anteriores do mutador, que são desativados em vez de apagados (D-21) |
 | `criado_em` | timestamptz | não | padrão `now()`; auditoria |
 
 **Por que `categoria_codigo` é segredo.** A categoria é exatamente o conteúdo da dica de nível 1 — "a natureza do defeito". Se o cliente puder lê-la, a dica 1 deixa de custar pontos e a gradação de RN-04 vira enfeite.
@@ -241,10 +243,11 @@ create table exercicios (
   id                 uuid primary key,
   programa_base_id   uuid not null references programas_base(id),
   categoria_codigo   text not null references categorias_defeito(codigo),
-  ordem              integer not null unique,
+  ordem              integer not null,
   codigo_com_defeito text not null,
   linha_defeito      integer not null check (linha_defeito > 0),
   mutador_versao     text not null,
+  ativo              boolean not null default true,
   criado_em          timestamptz not null default now()
 );
 
@@ -302,13 +305,18 @@ create index idx_tentativas_fechadas  on tentativas (usuario_id, fechada_em)
                                        where desfecho <> 'aberto';
 create index idx_eventos_tentativa    on eventos (tentativa_id, em, id);
 
+-- ordem única só entre os exercícios ativos (D-21)
+create unique index idx_exercicios_ordem_ativa
+  on exercicios (ordem)
+  where ativo;
+
 -- só uma tentativa aberta por aluno e exercício (RN-10)
 create unique index idx_uma_aberta_por_exercicio
   on tentativas (usuario_id, exercicio_id)
   where desfecho = 'aberto';
 ```
 
-`exercicios.ordem` já ganha índice por ser `unique`; não há índice adicional sobre ela.
+`exercicios.ordem` não é única globalmente: a unicidade vale só entre os exercícios ativos, pelo índice parcial `idx_exercicios_ordem_ativa`. Regerar com uma versão nova de mutador marca os antigos como `ativo = false` em vez de apagá-los, o que preserva as tentativas históricas e evita a colisão de `ordem` (D-21).
 
 As chaves estrangeiras de `tentativas` e `eventos` usam `on delete restrict`, não `cascade`. Apagar um usuário não pode remover silenciosamente o histórico que DA-06 define como fonte da verdade — excluir um aluno passa a exigir decisão deliberada sobre o que fazer com as tentativas dele.
 
@@ -333,24 +341,57 @@ Atende RNF-03, RNF-04 e a decisão DA-07. O princípio: **o cliente lê pouco e 
 
 ### 5.1 O que o cliente pode ler
 
-Nenhuma tabela é exposta diretamente. A leitura passa por duas views; o resto chega por endpoint.
+Nenhuma tabela é exposta diretamente. A leitura passa por uma view e por duas funções que devolvem só agregados; o resto chega por endpoint.
 
 ```sql
 create view temas_publicos as
   select codigo, nome, descricao, ativo from temas;
 
--- omite categoria_codigo (= dica 1), linha_defeito,
--- codigo_correto e suite_oculta
-create view exercicios_publicos as
-  select e.id, e.ordem, e.codigo_com_defeito,
-         p.assinatura, p.descricao, p.teste_exemplo,
-         p.tema_codigo, c.nivel
+-- progresso do aluno por tema (RF-03): só contagens
+create function progresso_por_tema()
+returns table (tema_codigo text, total bigint, resolvidos bigint)
+language sql stable security definer set search_path = public as $$
+  select p.tema_codigo, count(*), count(r.ok)
   from exercicios e
-  join programas_base p     on p.id = e.programa_base_id
-  join categorias_defeito c on c.codigo = e.categoria_codigo;
+  join programas_base p on p.id = e.programa_base_id
+  left join lateral (
+    select 1 as ok from tentativas t
+    where t.exercicio_id = e.id and t.usuario_id = auth.uid()
+      and t.desfecho = 'resolvido' limit 1
+  ) r on true
+  where e.ativo
+  group by p.tema_codigo;
+$$;
+
+-- níveis de um tema (RF-04): nomes das categorias do nível e contagens,
+-- sem ligar categoria a exercício
+create function niveis_do_tema(p_tema text)
+returns table (nivel text, categorias text[], total bigint, resolvidos bigint)
+language sql stable security definer set search_path = public as $$
+  select c.nivel,
+         array_agg(distinct c.nome order by c.nome),
+         count(x.id),
+         count(x.ok)
+  from categorias_defeito c
+  left join lateral (
+    select e.id,
+           (select 1 from tentativas t
+            where t.exercicio_id = e.id and t.usuario_id = auth.uid()
+              and t.desfecho = 'resolvido' limit 1) as ok
+    from exercicios e
+    join programas_base p on p.id = e.programa_base_id
+    where e.categoria_codigo = c.codigo and e.ativo
+      and p.tema_codigo = p_tema
+  ) x on true
+  group by c.nivel;
+$$;
 ```
 
-`nivel` é exposto porque o aluno escolheu o nível e precisa ver a pontuação-base. `categoria_codigo` não, porque revelaria a natureza do defeito.
+**O código do exercício não é legível pelo cliente.** Ele chega exclusivamente pela resposta de `POST /api/tentativa`, que devolve apenas o exercício da tentativa aberta daquele aluno: `codigo_com_defeito`, `assinatura`, `descricao`, `teste_exemplo` e `nivel`. Não existe view de exercícios (D-20). Com os `codigo_com_defeito` de todos os exercícios em mãos, agrupar os irmãos de um mesmo programa-base e votar linha a linha reconstruiria o `codigo_correto` e revelaria a `linha_defeito` de cada um.
+
+`nivel` pode ser exposto porque o aluno escolheu o nível e precisa ver a pontuação-base. Os nomes das categorias de um nível também podem (RF-04); o que não pode é ligar categoria a exercício, porque revelaria a natureza do defeito.
+
+**Limitação residual.** Um aluno determinado pode abrir uma tentativa em cada exercício para coletar os códigos. Isso custa a primeira tentativa de cada um — que é onde está a pontuação cheia — e deixa rastro em `tentativas`. A economia joga contra ele. A limitação é declarada no README.
 
 ### 5.2 Permissões
 
@@ -360,8 +401,14 @@ revoke all on temas, categorias_defeito, programas_base,
               exercicios, dicas, tentativas, eventos
   from anon, authenticated;
 
--- só as views, e só leitura
-grant select on temas_publicos, exercicios_publicos to authenticated;
+-- só a view, e só leitura
+grant select on temas_publicos to authenticated;
+
+-- funções de agregado: o padrão do Postgres concede execute a public
+revoke execute on function progresso_por_tema(), niveis_do_tema(text)
+  from public, anon;
+grant execute on function progresso_por_tema(), niveis_do_tema(text)
+  to authenticated;
 
 -- o perfil próprio, para o cabeçalho
 grant select, update on usuarios to authenticated;
@@ -400,7 +447,7 @@ A chave de serviço usada pelo servidor ignora RLS por definição. É por isso 
 
 ### 5.4 O gabarito após o encerramento
 
-A tela de feedback precisa de `codigo_correto` e `linha_defeito`, que as views escondem. São servidos por `GET /api/gabarito/[tentativa_id]`, que só responde quando a tentativa pertence ao solicitante e tem `desfecho <> 'aberto'`.
+A tela de feedback precisa de `codigo_correto` e `linha_defeito`, que nunca são expostos ao cliente durante a tentativa. São servidos por `GET /api/gabarito/[tentativa_id]`, que só responde quando a tentativa pertence ao solicitante e tem `desfecho <> 'aberto'`.
 
 ## 6. Consultas de referência
 
@@ -410,7 +457,7 @@ select coalesce(sum(pdr_final), 0) as pdr_total
 from tentativas
 where usuario_id = $1 and desfecho <> 'aberto';
 
--- progresso no tema (RF-03)
+-- progresso no tema (RF-03); implementada por progresso_por_tema()
 select count(*) as total,
        count(r.ok) as resolvidos
 from exercicios e
@@ -420,7 +467,7 @@ left join lateral (
   where t.exercicio_id = e.id and t.usuario_id = $1
     and t.desfecho = 'resolvido' limit 1
 ) r on true
-where p.tema_codigo = $2;
+where p.tema_codigo = $2 and e.ativo;
 
 -- RN-09, passo 1: existe tentativa aberta no tema e nível?
 select t.id, t.exercicio_id
@@ -443,7 +490,7 @@ left join lateral (
   where t.exercicio_id = e.id and t.usuario_id = $1
     and t.desfecho = 'resolvido' limit 1
 ) r on true
-where p.tema_codigo = $2 and c.nivel = $3
+where p.tema_codigo = $2 and c.nivel = $3 and e.ativo
 order by (r.ok is not null), e.ordem
 limit 1;
 
@@ -470,7 +517,7 @@ group by c.nome
 order by pdr_medio;
 ```
 
-O `order by (r.ok is not null), e.ordem` do passo 2 implementa RN-09 por inteiro: `false` vem antes de `true`, então não resolvidos primeiro, e dentro de cada grupo pela ordem. Quando tudo está resolvido, devolve o de menor ordem em vez de nada — que é o comportamento exigido pelo segundo critério de aceitação de RF-05.
+O `order by (r.ok is not null), e.ordem` do passo 2 implementa RN-09 por inteiro: `false` vem antes de `true`, então não resolvidos primeiro, e dentro de cada grupo pela ordem. Quando tudo está resolvido, devolve o de menor ordem em vez de nada — que é o comportamento exigido pelo terceiro critério de aceitação de RF-05. O filtro `e.ativo` restringe a seleção aos exercícios da versão vigente do mutador (D-21).
 
 ## 7. Notas de evolução
 
