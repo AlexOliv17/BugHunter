@@ -234,7 +234,7 @@ O executor interrompe e consulta o P.O. sempre que:
 | Antes de S0-02 | Projeto Supabase criado; URL, chave anônima e chave de serviço |
 | Antes de S0-02 | Chave da API do modelo de linguagem, e qual modelo usar |
 | Antes de S0-03 | Conta Vercel com o repositório conectado |
-| Antes de S1-06 | Repositório privado `BugHunter-conteudo` criado no GitHub (D-22) |
+| Antes de S1-06 | Repositório privado `BugHunter-Data` criado no GitHub (D-22) |
 | Antes de S1-06 | Os 12 textos de dica, três por categoria |
 | Antes de S1-08 | Revisão dos 5 programas-base e suas suítes |
 | Em S1-12 | Conferência manual de `linha_defeito` em todos os exercícios |

@@ -333,7 +333,7 @@ O evento `editou` é gravado sempre que o aluno aciona Precheck, Verificar ou En
 
 Roda na máquina do aluno, em Python, na pasta `/pipeline`. Não é publicado.
 
-**Código e conteúdo vivem em repositórios separados (D-22).** O repositório do projeto é público e contém apenas código: a aplicação, os mutadores, as migrations e esta documentação. O conteúdo que resolve os exercícios — os programas-base com `codigo_correto`, `teste_exemplo` e `suite_oculta`, e os textos das dicas — vive num repositório privado à parte, `BugHunter-conteudo`, que o pipeline lê a partir do caminho indicado em `CONTEUDO_DIR`. A aplicação publicada nunca precisa desse repositório: ela lê tudo do banco. Nenhum arquivo de conteúdo, e nenhuma saída do pipeline que contenha `codigo_correto`, `suite_oculta`, `linha_defeito` ou categoria por exercício, é gravado no repositório público.
+**Código e conteúdo vivem em repositórios separados (D-22).** O repositório do projeto é público e contém apenas código: a aplicação, os mutadores, as migrations e esta documentação. O conteúdo que resolve os exercícios — os programas-base com `codigo_correto`, `teste_exemplo` e `suite_oculta`, e os textos das dicas — vive num repositório privado à parte, `BugHunter-Data`, que o pipeline lê a partir do caminho indicado em `CONTEUDO_DIR`. A aplicação publicada nunca precisa desse repositório: ela lê tudo do banco. Nenhum arquivo de conteúdo, e nenhuma saída do pipeline que contenha `codigo_correto`, `suite_oculta`, `linha_defeito` ou categoria por exercício, é gravado no repositório público.
 
 ### 6.1 Algoritmo
 
@@ -514,7 +514,7 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-19 | Escopo do `ARIT_TROC` | aceita `ast.AugAssign` além de `ast.BinOp`. `contador += 1` é como código real se escreve | escrever os programas-base na forma `x = x + 1` para caber no mutador |
 | D-20 | Entrega do código do exercício | só pela resposta de `/api/tentativa`; a view `exercicios_publicos` é removida; as contagens vêm por agregados; a `ordem` é embaralhada com semente fixa. Com todos os códigos em mãos, comparar os irmãos de um programa-base reconstruiria o código correto e a linha do defeito | manter a view e registrar o vazamento como limitação |
 | D-21 | Versionamento dos exercícios | coluna `ativo` com índice único parcial sobre `ordem`, substituindo a unicidade global. Versões antigas são desativadas, não apagadas, preservando as tentativas históricas | `ordem` única para sempre, que colide quando `mutador_versao` muda |
-| D-22 | Onde vive o conteúdo dos exercícios | repositório privado `BugHunter-conteudo`, separado do repositório público de código e lido só pelo pipeline. O histórico do git é permanente: conteúdo publicado uma vez não se desfaz movendo-o depois | conteúdo no repositório público, movido para um privado ao fim da implementação |
+| D-22 | Onde vive o conteúdo dos exercícios | repositório privado `BugHunter-Data`, separado do repositório público de código e lido só pelo pipeline. O histórico do git é permanente: conteúdo publicado uma vez não se desfaz movendo-o depois | conteúdo no repositório público, movido para um privado ao fim da implementação |
 
 D-12 foi revista e D-16 a D-22 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
 
