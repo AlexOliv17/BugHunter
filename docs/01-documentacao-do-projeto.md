@@ -216,9 +216,9 @@ O editor de código inicia bloqueado. O aluno dispõe de duas tentativas de loca
 | acertou na 1ª tentativa | 1,0 | editor destrava |
 | errou a 1ª, acertou na 2ª | 0,6 | editor destrava |
 | errou as duas | 0,3 | editor destrava automaticamente |
-| não localizou (desistiu antes de localizar) | 0,3 | — |
+| localização não concluída (desistiu sem nenhum clique, ou após um único erro) | 0,3 | — |
 
-A última linha existe para que o cálculo do PDR não quebre quando a tentativa é encerrada por desistência sem evento `localizou` (D-17). Não afeta a nota, porque a desistência zera o PDR.
+A última linha existe para que o cálculo do PDR não quebre quando a tentativa é encerrada por desistência antes de a localização terminar — sem evento `localizou` ou com um único evento incorreto (D-17). Não afeta a nota, porque a desistência zera o PDR.
 
 A linha correta é `exercicios.linha_defeito`. A comparação é feita no servidor — o cliente envia a linha clicada e recebe apenas "correta" ou "incorreta".
 
@@ -261,7 +261,7 @@ PDR = base × (0,4 × fator_localização + 0,6 × fator_reparo)
 | COMPONENTE | ORIGEM |
 |---|---|
 | `base` | 100 se o nível da categoria é baixo, 200 se é médio |
-| `fator_localização` | eventos `localizou`, conforme RN-01; 0,3 na ausência deles (D-17) |
+| `fator_localização` | eventos `localizou`, conforme RN-01; 0,3 se a localização não foi concluída (D-17) |
 | `fator_reparo` | inicia em 1,0; −0,25 por evento `verificar` sem sucesso; piso 0 |
 | `multiplicador_dica` | maior nível de evento `dica`, conforme RN-04 |
 | `multiplicador_repeticao` | 1,0 se `numero_tentativa` é 1; 0,5 se maior |
@@ -307,11 +307,13 @@ A contagem é um diff linha a linha: cada linha modificada, inserida ou removida
 
 ### RN-09 · Seleção do próximo exercício
 
-Dentro de um tema e nível, considerando apenas exercícios com `ativo = true` (D-21), na ordem:
+Dentro de um tema e nível, na ordem:
 
 1. Se houver tentativa com desfecho `aberto`, retomá-la (RN-10).
 2. Senão, o exercício não resolvido de menor `ordem`.
 3. Senão, o exercício de menor `ordem`, sujeito a RN-07.
+
+Os passos 2 e 3 consideram apenas exercícios com `ativo = true` (D-21). O passo 1 não filtra por `ativo`: uma tentativa aberta num exercício desativado por uma versão nova do mutador continua sendo retomada, porque ela existe e o aluno já recebeu aquele código.
 
 ### RN-10 · Tentativa em aberto
 
@@ -490,7 +492,7 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-01 | Tentativas de localização | duas; na segunda falha destrava com fator 0,3 | três cliques |
 | D-02 | Limite de linhas editadas | informativo, sem bloqueio nem penalidade | bloquear ou penalizar |
 | D-03 | Repetição de exercício | ilimitada, multiplicador 0,5 fixo | decaimento progressivo |
-| D-04 | Ordem dos exercícios | fixa, atribuída pelo pipeline | aleatória ou adaptativa |
+| D-04 | Ordem dos exercícios | fixa, atribuída pelo pipeline (permutação com semente fixa, D-20) | aleatória por aluno ou a cada execução, ou adaptativa |
 | D-05 | Momento do feedback | ao resolver e ao desistir | só ao desistir |
 | D-06 | Persistência do feedback | gerado uma vez e armazenado | regerado a cada visita |
 | D-07 | Confirmação de e-mail | desativada na v1 | exigir confirmação |
@@ -503,7 +505,7 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-14 | Programas-base | entidade própria, com o tema | replicados em cada exercício |
 | D-15 | Evento de encerramento | tipo único `encerrou` com o desfecho | `desistiu` mais inferência |
 | D-16 | Arredondamento do PDR | meio-para-cima; 42,5 → 43. Em contexto educacional o empate favorece o aluno | arredondamento bancário |
-| D-17 | Desistir com o editor travado | disponível desde o início; na ausência de evento `localizou` o fator de localização é 0,3. Bloquear criaria um beco sem saída, e o placar já torna a desistência estritamente dominada | exigir localização antes de poder sair |
+| D-17 | Desistir com o editor travado | disponível desde o início; com a localização não concluída — nenhum evento `localizou`, ou um único incorreto — o fator de localização é 0,3. Bloquear criaria um beco sem saída, e o placar já torna a desistência estritamente dominada | exigir localização antes de poder sair |
 | D-18 | Alvo do `LACO_DESL` | o argumento `stop`, escolhido pela aridade do `range`, sempre com subtração de 1. É o limite que a categoria descreve | o último argumento posicional, que em `range` de 3 argumentos é o passo |
 | D-19 | Escopo do `ARIT_TROC` | aceita `ast.AugAssign` além de `ast.BinOp`. `contador += 1` é como código real se escreve | escrever os programas-base na forma `x = x + 1` para caber no mutador |
 | D-20 | Entrega do código do exercício | só pela resposta de `/api/tentativa`; a view `exercicios_publicos` é removida; as contagens vêm por agregados; a `ordem` é embaralhada com semente fixa. Com todos os códigos em mãos, comparar os irmãos de um programa-base reconstruiria o código correto e a linha do defeito | manter a view e registrar o vazamento como limitação |

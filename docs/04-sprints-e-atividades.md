@@ -138,7 +138,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 |---|---|---|---|---|
 | S4-01 | Endpoint de execução da suíte oculta, na rota decidida na S0, com limite de 5 segundos e ambiente sem credenciais | RF-10, RF-11 | 3 | |
 | S4-02 | `/api/verificar`: executa, grava o evento `verificar`, e grava `encerrou` quando tudo passa | RF-10, RN-03 | 2 | |
-| S4-03 | `calcularPdr(eventos, {base, numero_tentativa})` como função pura, com suíte de testes unitários cobrindo os cinco componentes, o exemplo trabalhado que resulta em 117, o empate 42,5 → 43 (D-16) e a ausência de evento `localizou` (D-17) | RF-14, RN-05 | 2,5 | ◆ validação |
+| S4-03 | `calcularPdr(eventos, {base, numero_tentativa})` como função pura, com suíte de testes unitários cobrindo os cinco componentes, o exemplo trabalhado que resulta em 117, o empate 42,5 → 43 (D-16) e a localização não concluída (D-17) | RF-14, RN-05 | 2,5 | ◆ validação |
 | S4-04 | Painel de pontuação ao vivo, discriminando o efeito de localização, reparo e dica | RF-14 | 2 | |
 | S4-05 | `/api/dica` verificando a condição de liberação antes de responder | RF-12, RN-04 | 1,5 | |
 | S4-06 | Interface das dicas nos três estados: indisponível com motivo, disponível com custo, usada com texto | RF-12 | 2 | |

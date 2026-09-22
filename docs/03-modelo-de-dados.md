@@ -470,6 +470,7 @@ left join lateral (
 where p.tema_codigo = $2 and e.ativo;
 
 -- RN-09, passo 1: existe tentativa aberta no tema e nível?
+-- sem filtro por e.ativo: tentativa aberta em exercício desativado é retomada
 select t.id, t.exercicio_id
 from tentativas t
 join exercicios e         on e.id = t.exercicio_id

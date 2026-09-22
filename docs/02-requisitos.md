@@ -85,7 +85,7 @@ O sistema deve permitir escolher entre Baixo e Médio, informando a pontuação-
 
 Ao entrar num nível, o sistema deve escolher o exercício e abrir ou retomar a tentativa correspondente.
 
-- **Dado** uma tentativa com desfecho `aberto` naquele tema e nível, **quando** o aluno iniciar, **então** ela é retomada, sem criar nova (RN-10).
+- **Dado** uma tentativa com desfecho `aberto` naquele tema e nível, **quando** o aluno iniciar, **então** ela é retomada, sem criar nova (RN-10), mesmo que o exercício dela tenha sido desativado (D-21).
 - **Dado** nenhuma tentativa aberta e exercícios não resolvidos, **quando** o aluno iniciar, **então** recebe o não resolvido de menor `ordem`.
 - **Dado** nenhuma tentativa aberta e todos os exercícios resolvidos, **quando** o aluno iniciar, **então** recebe o de menor `ordem`, com `multiplicador_repeticao` igual a 0,5.
 - **Dado** a criação de uma tentativa, **quando** ocorrer, **então** `numero_tentativa` recebe o maior valor existente para aquele par aluno-exercício, mais um (RN-11).
@@ -192,7 +192,7 @@ O sistema deve permitir encerrar a tentativa sem resolver, zerando a pontuação
 - **Dado** uma tentativa aberta, em qualquer estado — inclusive com o editor travado —, **quando** o aluno acionar Desistir, **então** o sistema pede confirmação explícita (D-17).
 - **Dado** a confirmação, **quando** for aceita, **então** um evento `editou` e um evento `encerrou` com `desfecho = 'desistiu'` são gravados, e a tentativa fecha com `pdr_final = 0`.
 - **Dado** uma tentativa encerrada por desistência, **quando** o aluno tentar retomá-la, **então** o sistema recusa e oferece iniciar nova tentativa.
-- **Dado** uma desistência sem nenhum evento `localizou`, **quando** o PDR for calculado, **então** `calcularPdr` não falha, usa fator de localização 0,3 e o resultado gravado é `pdr_final = 0` (D-17).
+- **Dado** uma desistência com a localização não concluída — nenhum evento `localizou`, ou um único incorreto —, **quando** o PDR for calculado, **então** `calcularPdr` não falha, usa fator de localização 0,3 e o resultado gravado é `pdr_final = 0` (D-17).
 
 #### RF-14 · Cálculo e exibição da pontuação
 *Prioridade: Obrigatório · Regras: RN-05 · Entidades: E-03, E-05, E-07, E-08*
