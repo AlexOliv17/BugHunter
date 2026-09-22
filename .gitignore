@@ -1,0 +1,23 @@
+# segredos
+.env
+.env.*
+!.env.example
+
+# node / next
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+.vercel/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# material fora do repositório
+/BugHunter_*.pdf
+/prompt_base_agente.md
+/Prototipagem BugHunter/
