@@ -87,9 +87,9 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 | S1-03 | Migration 003 — view `temas_publicos`, funções de agregado `progresso_por_tema` e `niveis_do_tema`, `revoke` / `grant`, políticas de RLS | RNF-03, RNF-04 | 1,5 | |
 | S1-04 | Teste de segurança do banco: com uma sessão de aluno comum, tentar ler `dicas`, `exercicios`, `programas_base` e escrever em `tentativas` e `eventos`. Todas devem falhar. As funções de agregado devolvem só contagens e nomes de categoria por nível, nunca código nem categoria por exercício | RNF-03, RNF-04 | 1 | ◆ validação |
 | S1-05 | Seed de `temas` (4 linhas, só `fundamentos` ativa) e `categorias_defeito` (4 linhas) | E-02, E-03 | 0,5 | |
-| S1-06 | Seed de `dicas` — os 12 textos, fornecidos pelo P.O. | E-06, RN-04 | 0,5 | ◆ insumo |
-| S1-07 | Estrutura do `/pipeline`: carregador dos programas-base, executor de suíte, gravação no Supabase | RNF-08 | 2 | |
-| S1-08 | Os 5 programas-base com `descricao`, `teste_exemplo` e `suite_oculta`, revisados pelo P.O. Cada suíte oculta contém ao menos um caso de borda não coberto pelo exemplo | E-04, Doc. Projeto §6.3 | 2 | ◆ validação |
+| S1-06 | Seed de `dicas` — os 12 textos, fornecidos pelo P.O., gravados no repositório privado de conteúdo e carregados pelo pipeline, não por migration | E-06, RN-04, D-22 | 0,5 | ◆ insumo |
+| S1-07 | Estrutura do `/pipeline`: carregador dos programas-base lidos de `CONTEUDO_DIR`, executor de suíte, gravação no Supabase. O pipeline recusa um `CONTEUDO_DIR` que esteja dentro do repositório público | RNF-08, D-22 | 2 | |
+| S1-08 | Os 5 programas-base com `descricao`, `teste_exemplo` e `suite_oculta`, escritos no repositório privado de conteúdo e revisados pelo P.O. Cada suíte oculta contém ao menos um caso de borda não coberto pelo exemplo | E-04, Doc. Projeto §6.3 | 2 | ◆ validação |
 | S1-09 | Os 4 mutadores com o parâmetro `alvo`, alterando exatamente o n-ésimo nó elegível | Doc. Projeto §6.2 | 2 | |
 | S1-10 | Validação dos 4 critérios e cálculo de `linha_defeito` contra a forma canônica | Doc. Projeto §6.3 | 1,5 | |
 | S1-11 | Carga idempotente: uuid5 de chave natural, atribuição de `ordem` por permutação com semente fixa dentro do nível, desativação de versões anteriores, segunda execução não duplica | RNF-08, D-20, D-21 | 1 | |
@@ -172,7 +172,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 | S6-02 | Revisão de segurança: repetir as auditorias de S1-04, S3-08 e S4-07 sobre a versão publicada | RNF-03, RNF-04, RNF-05 | 1,5 | ◆ validação |
 | S6-03 | Bateria de aceitação: percorrer os critérios de RF-01 a RF-17 um a um, registrando o resultado de cada um | todos | 3 | ◆ validação |
 | S6-04 | Medição e ajuste dos tempos de resposta contra as metas de RNF-02 | RNF-02 | 1 | |
-| S6-05 | README com variáveis de ambiente, como rodar o pipeline, como publicar e limitações conhecidas | — | 1 | |
+| S6-05 | README com variáveis de ambiente, como obter o repositório de conteúdo e rodar o pipeline, como publicar e limitações conhecidas | — | 1 | |
 | S6-06 | Demonstração final ao P.O. sobre o ambiente publicado | — | 1 | ◆ validação |
 
 **Critério de saída da S6:** o professor recebe o endereço, cria conta sozinho e resolve um exercício sem nenhuma intervenção.
@@ -234,6 +234,7 @@ O executor interrompe e consulta o P.O. sempre que:
 | Antes de S0-02 | Projeto Supabase criado; URL, chave anônima e chave de serviço |
 | Antes de S0-02 | Chave da API do modelo de linguagem, e qual modelo usar |
 | Antes de S0-03 | Conta Vercel com o repositório conectado |
+| Antes de S1-06 | Repositório privado `BugHunter-conteudo` criado no GitHub (D-22) |
 | Antes de S1-06 | Os 12 textos de dica, três por categoria |
 | Antes de S1-08 | Revisão dos 5 programas-base e suas suítes |
 | Em S1-12 | Conferência manual de `linha_defeito` em todos os exercícios |

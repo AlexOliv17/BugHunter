@@ -19,9 +19,9 @@ Oito entidades. Cinco são **catálogo** — carregadas pelo pipeline ou pelo au
 | E-01 | `usuarios` | operacional | servidor, no cadastro |
 | E-02 | `temas` | catálogo | autor do conteúdo |
 | E-03 | `categorias_defeito` | catálogo | pipeline |
-| E-04 | `programas_base` | catálogo | autor do conteúdo |
+| E-04 | `programas_base` | catálogo | autor do conteúdo, carregado pelo pipeline a partir do repositório privado (D-22) |
 | E-05 | `exercicios` | catálogo | pipeline |
-| E-06 | `dicas` | catálogo | autor do conteúdo |
+| E-06 | `dicas` | catálogo | autor do conteúdo, carregado pelo pipeline a partir do repositório privado (D-22) |
 | E-07 | `tentativas` | operacional | servidor |
 | E-08 | `eventos` | operacional | servidor, somente inserção |
 
