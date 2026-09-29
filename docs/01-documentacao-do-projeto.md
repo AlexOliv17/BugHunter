@@ -244,6 +244,10 @@ Executa a suíte oculta completa, no servidor, com limite de 5 segundos.
 
 O resultado exibido informa quantos testes passaram do total, sem revelar o conteúdo dos testes.
 
+A suíte oculta é uma lista de casos, cada um com a lista de argumentos (`entrada`) e o valor esperado (`esperado`) (D-26). O processo que executa o código do aluno recebe só as entradas e devolve os valores obtidos; a comparação com o esperado acontece no servidor, fora desse processo.
+
+**Regra de comparação (vale para Precheck e Verificar, D-27).** Números decimais são comparados com tolerância relativa de 10⁻⁹ do valor esperado; inteiros, textos e valores lógicos, com igualdade exata; listas, elemento a elemento com a mesma regra e o mesmo tamanho. Assim, `0.19999999999999998` e `0.20000000000000004` passam contra o esperado `0.2`, e `8.333333333333334` falha contra `8.0`.
+
 ### RN-04 · Dicas
 
 Três níveis, de revelação crescente, obtidos pelo servidor a partir da categoria do exercício.
@@ -523,8 +527,10 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-23 | Imutabilidade dos eventos | garantida também no banco: um gatilho recusa `update`, `delete` e `truncate` em `eventos` para qualquer papel, inclusive o servidor com a chave de serviço | garantir apenas pela ausência de grant ao cliente, deixando o servidor livre para alterar o histórico |
 | D-24 | Edição do perfil pelo aluno | só o `nome`; o e-mail vem do login e não é editável pelo cliente na v1 | editar o e-mail em `usuarios` e sincronizá-lo com o login |
 | D-25 | Ordem dos temas na tela | coluna `ordem` em `temas`, definida pelo autor do conteúdo: fundamentos, poo, ed1, ed2 | ativos primeiro e depois ordem alfabética, sem controle do autor |
+| D-26 | Formato da suíte oculta | lista de casos `{entrada, esperado}` em JSON; o processo do aluno recebe só as entradas e a comparação ocorre no servidor | código de teste, que levaria entradas e respostas juntas ao processo do aluno |
+| D-27 | Comparação de números decimais | tolerância relativa de 10⁻⁹, elemento a elemento em listas; demais tipos com igualdade exata | igualdade exata, que reprova correções certas escritas de outro jeito |
 
-D-12 foi revista e D-16 a D-25 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
+D-12 foi revista e D-16 a D-27 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
 
 ## 10. Riscos
 
