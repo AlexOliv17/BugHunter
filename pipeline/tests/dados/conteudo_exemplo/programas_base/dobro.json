@@ -1,0 +1,16 @@
+{
+  "_sobre": "Programa fictício, fora do catálogo, usado só nos testes do pipeline.",
+  "tema_codigo": "fundamentos",
+  "nome_funcao": "dobro",
+  "assinatura": "dobro(x)",
+  "descricao": "Devolve o dobro de x.",
+  "codigo": "def dobro(x):\n    # comentário que some na forma canônica\n    return x*2\n",
+  "categorias": ["ARIT_TROC"],
+  "teste_exemplo": {"chamada": "dobro(3)", "entrada": [3], "esperado": 6},
+  "suite_oculta": [
+    {"entrada": [3], "esperado": 6},
+    {"entrada": [0], "esperado": 0},
+    {"entrada": [-2], "esperado": -4},
+    {"entrada": [0.1], "esperado": 0.2}
+  ]
+}

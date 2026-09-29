@@ -1,0 +1,7 @@
+{
+  "_sobre": "Dicas fictícias, usadas só nos testes do pipeline.",
+  "CMP_INV": {"1": "t1", "2": "t2", "3": "t3"},
+  "ARIT_TROC": {"1": "t1", "2": "t2", "3": "t3"},
+  "LACO_DESL": {"1": "t1", "2": "t2", "3": "t3"},
+  "ACUM_AUSENTE": {"1": "t1", "2": "t2", "3": "t3"}
+}

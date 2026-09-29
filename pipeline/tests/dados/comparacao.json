@@ -1,0 +1,22 @@
+{
+  "_sobre": "Casos de referência da regra de comparação (D-27). Compartilhados entre pipeline, Precheck e Verificar para que as implementações não divirjam.",
+  "casos": [
+    {"obtido": 0.19999999999999998, "esperado": 0.2, "iguais": true, "motivo": "soma decimal em ordem diferente"},
+    {"obtido": 0.20000000000000004, "esperado": 0.2, "iguais": true, "motivo": "soma decimal em ordem diferente"},
+    {"obtido": 8.333333333333334, "esperado": 8.0, "iguais": false, "motivo": "erro real de 4%"},
+    {"obtido": 8.0, "esperado": 8.0, "iguais": true, "motivo": "igual"},
+    {"obtido": 8, "esperado": 8.0, "iguais": true, "motivo": "inteiro contra decimal de mesmo valor"},
+    {"obtido": 8.0000001, "esperado": 8.0, "iguais": false, "motivo": "diferença acima de 1e-9 relativo"},
+    {"obtido": 3, "esperado": 3, "iguais": true, "motivo": "inteiros iguais"},
+    {"obtido": 4, "esperado": 3, "iguais": false, "motivo": "inteiros diferentes"},
+    {"obtido": true, "esperado": 1, "iguais": false, "motivo": "lógico não é número"},
+    {"obtido": true, "esperado": true, "iguais": true, "motivo": "lógicos iguais"},
+    {"obtido": "abc", "esperado": "abc", "iguais": true, "motivo": "textos iguais"},
+    {"obtido": "abc", "esperado": "Abc", "iguais": false, "motivo": "texto diferencia maiúsculas"},
+    {"obtido": [3, 2, 1], "esperado": [3, 2, 1], "iguais": true, "motivo": "listas iguais"},
+    {"obtido": [3, 2], "esperado": [3, 2, 1], "iguais": false, "motivo": "tamanhos diferentes"},
+    {"obtido": [0.19999999999999998, 1], "esperado": [0.2, 1], "iguais": true, "motivo": "tolerância elemento a elemento"},
+    {"obtido": null, "esperado": 0, "iguais": false, "motivo": "None não é zero"},
+    {"obtido": null, "esperado": null, "iguais": true, "motivo": "None contra None"}
+  ]
+}
