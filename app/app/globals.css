@@ -1,26 +1,31 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Paleta do protótipo: tema escuro, destaque âmbar. Layout de desktop (RNF-07). */
+@theme {
+  --color-fundo: #17181c;
+  --color-painel: #1c1e24;
+  --color-campo: #1f2129;
+  --color-borda: #2e3039;
+  --color-texto: #ececea;
+  --color-texto-secundario: #a3a3a0;
+  --color-texto-apagado: #75756f;
+  --color-destaque: #e8a23a;
+  --color-sobre-destaque: #17181c;
+  --color-perigo: #ef6b5f;
+  --color-sucesso: #5fbf8a;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }

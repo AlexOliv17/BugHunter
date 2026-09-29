@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Pyodide copiado do npm no build (scripts/copiar-pyodide.mjs); não é código nosso.
+    "public/pyodide/**",
   ]),
 ]);
 
