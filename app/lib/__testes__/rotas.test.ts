@@ -22,7 +22,7 @@ describe("destinoSeguro", () => {
     expect(destinoSeguro("/temas/fundamentos?nivel=medio")).toBe("/temas/fundamentos?nivel=medio");
   });
   it("recusa destinos externos ou estranhos e cai em /temas", () => {
-    for (const d of ["https://malicioso.com", "//malicioso.com", "/\malicioso.com", "/login", "/cadastro", "", null, 42])
+    for (const d of ["https://malicioso.com", "//malicioso.com", "/\\malicioso.com", "/login", "/cadastro", "", null, 42])
       expect(destinoSeguro(d)).toBe("/temas");
   });
 });
