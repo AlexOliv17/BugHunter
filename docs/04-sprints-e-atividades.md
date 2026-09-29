@@ -136,7 +136,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 
 | # | ATIVIDADE | REF. | H | ◆ |
 |---|---|---|---|---|
-| S4-01 | Endpoint de execução da suíte oculta, na rota decidida na S0, com limite de 5 segundos e ambiente sem credenciais | RF-10, RF-11 | 3 | |
+| S4-01 | Endpoint de execução da suíte oculta na rota A' (DA-08): executor Python num projeto Vercel separado, sem credenciais, chamado pelo servidor com segredo compartilhado; limite de 5 segundos. O processo do aluno recebe só as entradas dos testes, e a comparação com o esperado ocorre fora dele | RF-10, RF-11, DA-08 | 3 | |
 | S4-02 | `/api/verificar`: executa, grava o evento `verificar`, e grava `encerrou` quando tudo passa | RF-10, RN-03 | 2 | |
 | S4-03 | `calcularPdr(eventos, {base, numero_tentativa})` como função pura, com suíte de testes unitários cobrindo os cinco componentes, o exemplo trabalhado que resulta em 117, o empate 42,5 → 43 (D-16) e a localização não concluída (D-17) | RF-14, RN-05 | 2,5 | ◆ validação |
 | S4-04 | Painel de pontuação ao vivo, discriminando o efeito de localização, reparo e dica | RF-14 | 2 | |
@@ -196,7 +196,7 @@ O executor não:
 - inventa regra de negócio que não esteja nos documentos;
 - altera escopo, nem para mais nem para menos;
 - implementa item da lista "Fora de escopo" do Documento de Requisitos, seção 6;
-- troca decisão arquitetural registrada (DA-01 a DA-07) sem aprovação;
+- troca decisão arquitetural registrada (DA-01 a DA-08) sem aprovação;
 - expõe ao cliente qualquer dos quatro segredos de RNF-03;
 - permite que o cliente escreva em `tentativas` ou `eventos`;
 - pula um ponto de validação ◆.
@@ -235,6 +235,7 @@ O executor interrompe e consulta o P.O. sempre que:
 | Antes de S0-02 | Chave da API do modelo de linguagem, e qual modelo usar |
 | Antes de S0-03 | Conta Vercel com o repositório conectado |
 | Antes de S1-06 | Repositório privado `BugHunter-Data` criado no GitHub (D-22) |
+| Antes de S4-01 | Segundo projeto Vercel para o executor, sem variáveis de ambiente sensíveis (DA-08) |
 | Antes de S1-06 | Os 12 textos de dica, três por categoria |
 | Antes de S1-08 | Revisão dos 5 programas-base e suas suítes |
 | Em S1-12 | Conferência manual de `linha_defeito` em todos os exercícios |

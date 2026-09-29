@@ -159,8 +159,9 @@ São 13 combinações de programa e categoria. Como um mesmo programa pode ter m
 │                         │                                    │
 │          ┌──────────────▼─────────────┐                      │
 │          │ ENDPOINT DE EXECUÇÃO       │                      │
-│          │ rota A: função Python      │                      │
-│          │ rota B: Pyodide no Node    │                      │
+│          │ projeto Vercel separado    │                      │
+│          │ Python + subprocess (DA-08)│                      │
+│          │ sem nenhuma credencial     │                      │
 │          └────────────────────────────┘                      │
 └───────────────────────────┬──────────────────────────────────┘
                             │ chave de serviço
@@ -183,7 +184,7 @@ Toda escrita em `tentativas` e `eventos` passa pelos endpoints, com a chave de s
 
 ### 4.2 Decisões arquiteturais
 
-**DA-01 · Next.js com TypeScript, não FastAPI com Python.** O aluno já entregou um projeto com Next + Vercel + Supabase. O cliente JavaScript do Supabase é o mais bem documentado da plataforma, e CodeMirror e Pyodide são bibliotecas JavaScript, integradas como componentes naturais em React. O Python do projeto é todo offline e não depende dessa escolha.
+**DA-01 · Next.js com TypeScript, não FastAPI com Python.** O aluno já entregou um projeto com Next + Vercel + Supabase. O cliente JavaScript do Supabase é o mais bem documentado da plataforma, e CodeMirror e Pyodide são bibliotecas JavaScript, integradas como componentes naturais em React. O Python do projeto é todo offline e não depende dessa escolha. A exceção é o executor do Verificar (DA-08), que roda num projeto Vercel à parte.
 
 **DA-02 · Geração de exercícios por mutação determinística de AST, sem IA.** Mutação sintática garante que a linha do defeito seja conhecida com exatidão — ela é a verdade fundamental contra a qual se avalia o diagnóstico do aluno. Um gerador baseado em modelo de linguagem introduziria incerteza justamente onde não pode haver.
 
@@ -197,6 +198,8 @@ Toda escrita em `tentativas` e `eventos` passa pelos endpoints, com a chave de s
 
 **DA-07 · Segredo do exercício vive no servidor.** Três informações resolvem o exercício e nunca podem chegar ao cliente antes do encerramento: a suíte oculta, o código correto, a linha do defeito. Uma quarta, a categoria do defeito, equivale à dica de nível 1 e também fica retida. O cliente recebe apenas o que precisa para exibir a tela.
 
+**DA-08 · Verificar executado em Python com subprocess, num projeto Vercel separado e sem credenciais (rota A').** O executor da suíte oculta roda em Python, em processo filho com `env={}`, tempo limite de 5 s e limites de memória e de disco do sistema operacional. Ele fica num segundo projeto Vercel que não tem nenhuma variável de ambiente sensível. O servidor Next.js busca a suíte e o código no banco e chama o executor por HTTPS, autenticando-se com um segredo compartilhado. A decisão veio do spike da S0 (relatório em `docs/relatorios/S0-07-spike-execucao.md`). Na rota A dentro do mesmo projeto, o processo do aluno lia a chave de serviço em `/proc/<pai>/environ`, porque a Vercel injeta todas as variáveis do projeto em todas as funções. Na rota B, a partida a frio chegou a 5,5 s, acima do teto do RNF-02, e uma submissão que esgotava a memória derrubava a instância inteira. Separar o projeto elimina a credencial do ambiente de execução por construção.
+
 ### 4.3 O risco técnico a resolver antes de tudo
 
 Executar código enviado pelo aluno é executar código não confiável. Há duas rotas possíveis para o endpoint do Verificar, e nenhuma está verificada:
@@ -206,6 +209,8 @@ Executar código enviado pelo aluno é executar código não confiável. Há dua
 **Rota B — Pyodide no servidor, dentro de um route handler do Node.** Mantém runtime único e oferece isolamento mais forte: sandbox WASM, sem sistema de arquivos e sem acesso a variáveis de ambiente. O risco é o tempo de carga em partida a frio.
 
 **Plano de ação:** testar as duas em até 4 horas e adotar a que funcionar, preferindo a B. Se ambas falharem, o plano C é executar o Verificar em Pyodide no cliente, buscando a suíte oculta apenas no momento do clique e sem cacheá-la — solução que protege contra o aluno casual, não contra o determinado, e que deve ser declarada como limitação.
+
+**Resultado (S0-07, 2026-09-29):** adotada a rota A em projeto Vercel separado, sem credenciais (DA-08). A preferência inicial pela rota B foi revista com base nas medições.
 
 ## 5. Regras de negócio
 
