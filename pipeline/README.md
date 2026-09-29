@@ -19,6 +19,8 @@ Copie `.env.example` para `.env` e preencha `SUPABASE_URL`, `SUPABASE_SERVICE_RO
 | `python -m bughunter_pipeline validar` | valida o conteúdo sem tocar no banco |
 | `python -m bughunter_pipeline dicas` | grava as 12 dicas e confere exatamente 3 por categoria (Modelo §4.1) |
 | `python -m bughunter_pipeline programas` | grava os programas-base |
+| `python -m bughunter_pipeline gerar` | avalia os candidatos a exercício e mostra o relatório, sem gravar |
+| `python -m bughunter_pipeline carregar` | grava programas-base e exercícios; desativa os que não saíram desta geração (D-21) |
 | `python -m unittest -v` | roda os testes |
 
 Todas as cargas são idempotentes: rodar duas vezes atualiza as linhas em vez de duplicá-las (RNF-08).

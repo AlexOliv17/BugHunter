@@ -38,5 +38,10 @@ class Supabase:
                     {"Prefer": "resolution=merge-duplicates,return=minimal"})
         return len(linhas)
 
+    def atualizar(self, tabela: str, filtro: str, valores: dict) -> int:
+        """Atualiza as linhas que casam com o filtro PostgREST; devolve quantas mudaram."""
+        linhas = self._pedir("PATCH", f"{tabela}?{filtro}", valores, {"Prefer": "return=representation"})
+        return len(linhas or [])
+
     def selecionar(self, tabela: str, colunas: str = "*", filtro: str = "") -> list[dict]:
         return self._pedir("GET", f"{tabela}?select={colunas}{'&' + filtro if filtro else ''}")

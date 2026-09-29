@@ -4,6 +4,7 @@
     python -m bughunter_pipeline dicas       carrega as 12 dicas e confere 3 por categoria
     python -m bughunter_pipeline programas   carrega os programas-base
     python -m bughunter_pipeline gerar       avalia os candidatos a exercício, sem gravar
+    python -m bughunter_pipeline carregar    grava programas-base e exercícios (idempotente)
 """
 
 import sys
@@ -12,6 +13,7 @@ from collections import Counter
 from .config import ErroDeConfiguracao, carregar_config
 from .conteudo import ConteudoInvalido, carregar_dicas, carregar_programas
 from .supabase import ErroSupabase, Supabase
+from .carga import carregar_exercicios, montar_linhas
 from .validacao import ErroDeLinha, avaliar_programa
 
 
@@ -56,7 +58,20 @@ def gerar(config) -> None:
     print(f"{len(validos)} exercícios válidos; {so_na_borda} passam no exemplo e só falham na borda")
 
 
-COMANDOS = {"validar": validar, "dicas": dicas, "programas": programas, "gerar": gerar}
+def carregar(config) -> None:
+    banco = Supabase(config)
+    lista = carregar_programas(config.conteudo_dir)
+    validos = [c for p in lista for c in avaliar_programa(p) if c.valido]
+    niveis = {c["codigo"]: c["nivel"] for c in banco.selecionar("categorias_defeito", "codigo,nivel")}
+    linhas = montar_linhas(validos, niveis)
+    banco.upsert("programas_base", [p.linha_banco() for p in lista], "id")
+    r = carregar_exercicios(banco, linhas)
+    ativos = banco.selecionar("exercicios", "id", "ativo=eq.true")
+    print(f"{len(lista)} programas-base; {r['gravados']} exercícios gravados, "
+          f"{r['desativados']} desativados; {len(ativos)} ativos no banco")
+
+
+COMANDOS = {"validar": validar, "dicas": dicas, "programas": programas, "gerar": gerar, "carregar": carregar}
 
 
 def main(argv: list[str]) -> int:
