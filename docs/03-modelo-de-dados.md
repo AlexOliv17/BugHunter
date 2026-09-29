@@ -432,7 +432,8 @@ grant execute on function progresso_por_tema(), niveis_do_tema(text)
 -- o perfil próprio, para o cabeçalho; o revoke retira os privilégios padrão
 -- do Supabase (insert, delete, e tudo para anon)
 revoke all on usuarios from anon, authenticated;
-grant select, update on usuarios to authenticated;
+grant select on usuarios to authenticated;
+grant update (nome) on usuarios to authenticated;   -- só o nome é editável (D-24)
 ```
 
 `dicas` não tem grant algum para o cliente. O texto chega exclusivamente por `POST /api/dica`, que confere a condição de liberação de RN-04 antes de responder. Sem isso, o aluno leria os três textos de uma vez e o custo em pontos seria decorativo.
