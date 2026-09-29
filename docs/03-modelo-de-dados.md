@@ -90,6 +90,8 @@ Espelha `auth.users`, gerenciada pelo Supabase Auth, acrescentando o nome de exi
 | `nome` | text | não | nome de exibição; cabeçalho e feedback |
 | `criado_em` | timestamptz | não | padrão `now()`; auditoria |
 
+**Criação da linha.** Um gatilho em `auth.users` (`usuarios_no_cadastro`) insere a linha na mesma transação em que o Supabase Auth cria a conta, com o mesmo `id` e o nome enviado nos metadados do cadastro. Sem nome, o cadastro é recusado, inclusive quando feito direto pela API do Auth (RF-01, S2-03).
+
 ### E-02 · temas
 
 Catálogo dos temas exibidos na tela de seleção, incluindo os que ainda não têm conteúdo. Atende RF-03.
