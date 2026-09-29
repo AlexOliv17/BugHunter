@@ -3,6 +3,7 @@
     python -m bughunter_pipeline validar     valida o conteúdo, sem tocar no banco
     python -m bughunter_pipeline dicas       carrega as 12 dicas e confere 3 por categoria
     python -m bughunter_pipeline programas   carrega os programas-base
+    python -m bughunter_pipeline gerar       avalia os candidatos a exercício, sem gravar
 """
 
 import sys
@@ -11,6 +12,7 @@ from collections import Counter
 from .config import ErroDeConfiguracao, carregar_config
 from .conteudo import ConteudoInvalido, carregar_dicas, carregar_programas
 from .supabase import ErroSupabase, Supabase
+from .validacao import ErroDeLinha, avaliar_programa
 
 
 def validar(config) -> None:
@@ -39,7 +41,22 @@ def programas(config) -> None:
     print(f"{n} programa(s)-base gravado(s)")
 
 
-COMANDOS = {"validar": validar, "dicas": dicas, "programas": programas}
+def gerar(config) -> None:
+    validos = []
+    for p in carregar_programas(config.conteudo_dir):
+        for c in avaliar_programa(p):
+            if c.valido:
+                validos.append(c)
+                exemplo = "passa no exemplo" if c.passa_no_exemplo else "quebra o exemplo"
+                print(f"  válido     {p.nome_funcao:16} {c.categoria:12} #{c.ocorrencia}  "
+                      f"linha {c.linha_defeito}  suíte {c.passados}/{c.total}  {exemplo}")
+            else:
+                print(f"  descartado {p.nome_funcao:16} {c.categoria:12} #{c.ocorrencia}  {c.motivo}")
+    so_na_borda = sum(c.passa_no_exemplo for c in validos)
+    print(f"{len(validos)} exercícios válidos; {so_na_borda} passam no exemplo e só falham na borda")
+
+
+COMANDOS = {"validar": validar, "dicas": dicas, "programas": programas, "gerar": gerar}
 
 
 def main(argv: list[str]) -> int:
@@ -50,7 +67,7 @@ def main(argv: list[str]) -> int:
         return 2
     try:
         COMANDOS[argv[0]](carregar_config())
-    except (ErroDeConfiguracao, ConteudoInvalido, ErroSupabase) as e:
+    except (ErroDeConfiguracao, ConteudoInvalido, ErroSupabase, ErroDeLinha) as e:
         print(f"erro: {e}", file=sys.stderr)
         return 1
     return 0
