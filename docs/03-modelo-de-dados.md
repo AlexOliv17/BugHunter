@@ -401,7 +401,10 @@ revoke all on temas, categorias_defeito, programas_base,
               exercicios, dicas, tentativas, eventos
   from anon, authenticated;
 
--- só a view, e só leitura
+-- só a view, e só leitura. O revoke retira os privilégios que o Supabase concede
+-- por padrão a objetos novos em public: sem ele, a view, que é atualizável
+-- automaticamente, aceitaria insert/update/delete em temas
+revoke all on temas_publicos from anon, authenticated;
 grant select on temas_publicos to authenticated;
 
 -- funções de agregado: o padrão do Postgres concede execute a public
@@ -410,7 +413,9 @@ revoke execute on function progresso_por_tema(), niveis_do_tema(text)
 grant execute on function progresso_por_tema(), niveis_do_tema(text)
   to authenticated;
 
--- o perfil próprio, para o cabeçalho
+-- o perfil próprio, para o cabeçalho; o revoke retira os privilégios padrão
+-- do Supabase (insert, delete, e tudo para anon)
+revoke all on usuarios from anon, authenticated;
 grant select, update on usuarios to authenticated;
 ```
 
