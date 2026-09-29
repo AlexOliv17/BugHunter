@@ -100,8 +100,9 @@ Catálogo dos temas exibidos na tela de seleção, incluindo os que ainda não t
 | `nome` | text | não | ex. "Fundamentos de Programação" |
 | `descricao` | text | não | uma linha, exibida no card |
 | `ativo` | boolean | não | `false` marca o card como indisponível |
+| `ordem` | integer | não | posição do card na tela de temas; única (D-25) |
 
-Conteúdo da v1: `fundamentos` (ativo) · `poo` · `ed1` · `ed2` (inativos).
+Conteúdo da v1, nesta ordem: `fundamentos` (ativo) · `poo` · `ed1` · `ed2` (inativos).
 
 ### E-03 · categorias_defeito
 
@@ -217,7 +218,8 @@ create table temas (
   codigo      text primary key,
   nome        text not null,
   descricao   text not null,
-  ativo       boolean not null default false
+  ativo       boolean not null default false,
+  ordem       integer not null unique            -- D-25
 );
 
 create table categorias_defeito (
@@ -361,7 +363,7 @@ Nenhuma tabela é exposta diretamente. A leitura passa por uma view e por duas f
 
 ```sql
 create view temas_publicos as
-  select codigo, nome, descricao, ativo from temas;
+  select codigo, nome, descricao, ativo, ordem from temas;
 
 -- progresso do aluno por tema (RF-03): só contagens
 create function progresso_por_tema()

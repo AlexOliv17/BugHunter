@@ -522,8 +522,9 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-22 | Onde vive o conteúdo dos exercícios | repositório privado `BugHunter-Data`, separado do repositório público de código e lido só pelo pipeline. O histórico do git é permanente: conteúdo publicado uma vez não se desfaz movendo-o depois | conteúdo no repositório público, movido para um privado ao fim da implementação |
 | D-23 | Imutabilidade dos eventos | garantida também no banco: um gatilho recusa `update`, `delete` e `truncate` em `eventos` para qualquer papel, inclusive o servidor com a chave de serviço | garantir apenas pela ausência de grant ao cliente, deixando o servidor livre para alterar o histórico |
 | D-24 | Edição do perfil pelo aluno | só o `nome`; o e-mail vem do login e não é editável pelo cliente na v1 | editar o e-mail em `usuarios` e sincronizá-lo com o login |
+| D-25 | Ordem dos temas na tela | coluna `ordem` em `temas`, definida pelo autor do conteúdo: fundamentos, poo, ed1, ed2 | ativos primeiro e depois ordem alfabética, sem controle do autor |
 
-D-12 foi revista e D-16 a D-24 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
+D-12 foi revista e D-16 a D-25 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
 
 ## 10. Riscos
 

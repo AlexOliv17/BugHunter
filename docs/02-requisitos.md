@@ -66,7 +66,7 @@ O sistema deve autenticar por e-mail e senha e manter a sessão entre visitas.
 
 O sistema deve exibir os temas, indicando os ativos e os que virão em versões futuras, com o progresso do aluno no tema ativo.
 
-- **Dado** um aluno autenticado, **quando** acessar a tela de temas, **então** vê todas as linhas de `temas`, ordenadas.
+- **Dado** um aluno autenticado, **quando** acessar a tela de temas, **então** vê todas as linhas de `temas`, ordenadas por `ordem` (D-25).
 - **Dado** um tema com `ativo = false`, **quando** for exibido, **então** aparece com marcação de indisponível e não é clicável.
 - **Dado** o tema ativo, **quando** for exibido, **então** mostra exercícios resolvidos sobre o total do tema, contados conforme a consulta de progresso do Modelo de Dados, seção 6.
 
