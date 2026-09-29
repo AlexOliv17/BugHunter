@@ -21,3 +21,4 @@ venv/
 /BugHunter_*.pdf
 /prompt_base_agente.md
 /Prototipagem BugHunter/
+/app/public/pyodide/
