@@ -46,3 +46,21 @@ create index idx_eventos_tentativa    on eventos (tentativa_id, em, id);
 create unique index idx_uma_aberta_por_exercicio
   on tentativas (usuario_id, exercicio_id)
   where desfecho = 'aberto';
+
+-- eventos são somente inserção para qualquer papel, inclusive o servidor (RF-17, D-23)
+create function eventos_imutaveis() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  raise exception 'eventos são imutáveis: % não é permitido (RF-17)', tg_op;
+end;
+$$;
+
+create trigger eventos_sem_alteracao
+  before update or delete on eventos
+  for each row execute function eventos_imutaveis();
+
+create trigger eventos_sem_truncate
+  before truncate on eventos
+  for each statement execute function eventos_imutaveis();
+
+revoke execute on function eventos_imutaveis() from public, anon, authenticated;

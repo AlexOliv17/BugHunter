@@ -314,6 +314,22 @@ create unique index idx_exercicios_ordem_ativa
 create unique index idx_uma_aberta_por_exercicio
   on tentativas (usuario_id, exercicio_id)
   where desfecho = 'aberto';
+
+-- eventos são somente inserção para qualquer papel, inclusive o servidor (RF-17, D-23)
+create function eventos_imutaveis() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  raise exception 'eventos são imutáveis: % não é permitido (RF-17)', tg_op;
+end;
+$$;
+
+create trigger eventos_sem_alteracao
+  before update or delete on eventos
+  for each row execute function eventos_imutaveis();
+
+create trigger eventos_sem_truncate
+  before truncate on eventos
+  for each statement execute function eventos_imutaveis();
 ```
 
 `exercicios.ordem` não é única globalmente: a unicidade vale só entre os exercícios ativos, pelo índice parcial `idx_exercicios_ordem_ativa`. Regerar com uma versão nova de mutador marca os antigos como `ativo = false` em vez de apagá-los, o que preserva as tentativas históricas e evita a colisão de `ordem` (D-21).
