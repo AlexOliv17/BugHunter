@@ -58,6 +58,7 @@ O sistema deve autenticar por e-mail e senha e manter a sessão entre visitas.
 - **Dado** credenciais incorretas, **quando** submeter, **então** o sistema exibe erro genérico, sem revelar se o e-mail existe.
 - **Dado** um aluno autenticado, **quando** fechar e reabrir o navegador dentro da validade da sessão, **então** continua autenticado.
 - **Dado** um visitante não autenticado, **quando** acessar qualquer rota de exercício, **então** é redirecionado ao login.
+- **Dado** um aluno autenticado, **quando** acionar Sair no cabeçalho, **então** a sessão é encerrada e ele volta ao login (D-28).
 
 ### Navegação e seleção
 

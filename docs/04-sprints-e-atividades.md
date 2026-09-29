@@ -106,7 +106,7 @@ O plano da v1 estimava ~65 horas de funcionalidade. As 17 horas adicionais são 
 | S2-01 | Cadastro com nome, e-mail e senha, sem confirmação por e-mail | RF-01 | 1,5 | |
 | S2-02 | Login, sessão persistente e proteção das rotas autenticadas | RF-02 | 1,5 | |
 | S2-03 | Criação da linha em `usuarios` espelhando `auth.users` no momento do cadastro | RF-01, E-01 | 1 | |
-| S2-04 | Tela de temas com os quatro cards e o progresso no tema ativo | RF-03 | 2 | ◆ validação |
+| S2-04 | Tela de temas com os quatro cards e o progresso no tema ativo, e o cabeçalho das telas logadas com Sair (D-28) | RF-03, RF-02 | 2 | ◆ validação |
 | S2-05 | Tela de nível com pontuação-base e categorias de cada nível | RF-04 | 1,5 | |
 | S2-06 | Endpoint de abertura ou retomada de tentativa, implementando RN-09, RN-10 e RN-11 | RF-05 | 1,5 | |
 | S2-07 | Testes de RN-09 (as três situações) e de RN-11 sob duas requisições simultâneas | RF-05 | 1 | |

@@ -529,8 +529,9 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-25 | Ordem dos temas na tela | coluna `ordem` em `temas`, definida pelo autor do conteúdo: fundamentos, poo, ed1, ed2 | ativos primeiro e depois ordem alfabética, sem controle do autor |
 | D-26 | Formato da suíte oculta | lista de casos `{entrada, esperado}` em JSON; o processo do aluno recebe só as entradas e a comparação ocorre no servidor | código de teste, que levaria entradas e respostas juntas ao processo do aluno |
 | D-27 | Comparação de números decimais | tolerância relativa de 10⁻⁹, elemento a elemento em listas; demais tipos com igualdade exata | igualdade exata, que reprova correções certas escritas de outro jeito |
+| D-28 | Sair da conta | botão Sair no cabeçalho das telas logadas, que encerra a sessão e volta ao login; entra com o cabeçalho da S2-04 | não oferecer saída na v1, impedindo trocar de conta no mesmo navegador |
 
-D-12 foi revista e D-16 a D-27 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
+D-12 foi revista e D-16 a D-28 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
 
 ## 10. Riscos
 
