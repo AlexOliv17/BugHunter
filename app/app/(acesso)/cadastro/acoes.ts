@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { mensagemDoErro, normalizar, validarCadastro, type ErrosCadastro } from "@/lib/cadastro";
+import { DESTINO_APOS_ENTRAR } from "@/lib/rotas";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 
 export type EstadoCadastro = { erros?: ErrosCadastro; erroGeral?: string; valores?: { nome: string; email: string } };
@@ -29,5 +30,5 @@ export async function cadastrar(_anterior: EstadoCadastro, formulario: FormData)
   // Com a confirmação de e-mail desligada (D-07), o cadastro já devolve a sessão.
   if (!data.session) return { erroGeral: mensagemDoErro(undefined), valores };
 
-  redirect("/");
+  redirect(DESTINO_APOS_ENTRAR);
 }

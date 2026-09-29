@@ -1,18 +1,12 @@
-import Link from "next/link";
+import { redirect } from "next/navigation";
 
+import { DESTINO_APOS_ENTRAR } from "@/lib/rotas";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
 
+// A raiz não tem tela própria: quem está logado vai aos temas, quem não está, ao login.
+// O proxy já faz esse desvio; aqui fica a garantia caso ele não rode.
 export default async function Inicio() {
   const supabase = await criarClienteServidor();
   const { data } = await supabase.auth.getUser();
-  const nome = data.user?.user_metadata?.nome as string | undefined;
-
-  return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4">
-      <h1 className="text-2xl font-semibold">BugHunter</h1>
-      {data.user
-        ? <p className="text-texto-secundario">Olá, {nome ?? data.user.email}.</p>
-        : <Link href="/cadastro" className="text-destaque hover:underline">Criar conta</Link>}
-    </main>
-  );
+  redirect(data.user ? DESTINO_APOS_ENTRAR : "/login");
 }
