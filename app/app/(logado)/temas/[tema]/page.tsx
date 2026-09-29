@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BotaoComecar } from "./BotaoComecar";
 import { montarNiveis, type CardNivel, type NivelDoTema } from "@/lib/niveis";
 import { exigirUsuario } from "@/lib/sessao";
 import { criarClienteServidor } from "@/lib/supabase/servidor";
@@ -16,7 +17,7 @@ function Intensidade({ cheias, cor }: { cheias: number; cor: string }) {
   );
 }
 
-function CardDisponivel({ card }: { card: CardNivel }) {
+function CardDisponivel({ card, tema }: { card: CardNivel; tema: string }) {
   const medio = card.nivel === "medio";
   return (
     <article className="group flex flex-col rounded border border-borda bg-painel p-8 transition-colors hover:border-destaque">
@@ -33,11 +34,7 @@ function CardDisponivel({ card }: { card: CardNivel }) {
         <div className="flex justify-between"><dt className="text-texto-secundario">PDR máximo</dt><dd className="font-semibold">{card.base} pts</dd></div>
         <div className="flex justify-between"><dt className="text-texto-secundario">Resolvidos</dt><dd className="font-semibold">{card.resolvidos} / {card.total}</dd></div>
       </dl>
-      {/* Abre o exercício pela regra do RF-05, ligada na S2-06. */}
-      <button type="button" disabled
-        className="mt-5 h-12 rounded border border-borda font-semibold text-texto-secundario transition-colors group-hover:border-destaque group-hover:bg-destaque group-hover:text-sobre-destaque disabled:cursor-not-allowed">
-        Começar
-      </button>
+      <BotaoComecar tema={tema} nivel={card.nivel} />
     </article>
   );
 }
@@ -77,7 +74,7 @@ export default async function PaginaNivel({ params }: PageProps<"/temas/[tema]">
       <h1 className="mt-6 text-4xl font-semibold">Nível de dificuldade</h1>
       <p className="mt-3 text-texto-secundario">A dificuldade é definida pela categoria do defeito plantado — não pelo tamanho do código.</p>
       <div className="mt-10 grid grid-cols-3 gap-6">
-        {niveis.map((card) => <CardDisponivel key={card.nivel} card={card} />)}
+        {niveis.map((card) => <CardDisponivel key={card.nivel} card={card} tema={tema.codigo} />)}
         <CardAlto />
       </div>
     </main>
