@@ -58,7 +58,7 @@ def valor(resposta):
     except (TypeError, KeyError, IndexError):
         return None
     if fio["t"] == "dict":
-        return {k: (v["v"] if v["t"] == "bool" else int(v["v"])) for k, v in fio["v"].items()}
+        return {k: (int(v["v"]) if v["t"] == "int" else v["v"]) for k, v in fio["v"].items()}
     return fio
 
 
@@ -71,6 +71,8 @@ def f():
     nomes = list(os.environ)
     return {
         "variaveis_no_filho": len(nomes),
+        # nomes, não valores: o ambiente do filho é criado vazio pelo executor
+        "nomes_no_filho": ",".join(sorted(nomes)),
         "nome_suspeito_no_filho": any(p in n.upper() for n in nomes
                                       for p in ("SUPABASE", "FEEDBACK", "GEMINI", "SECRET", "SEGREDO", "KEY", "TOKEN")),
         # só a permissão de leitura; o conteúdo não é aberto
@@ -142,7 +144,9 @@ def main():
 
     st, r, _ = chamar(args.url, chave, AMBIENTE)
     v = valor(r) or {}
-    registrar("variáveis no processo do aluno", v.get("variaveis_no_filho"), "0", v.get("variaveis_no_filho") == 0)
+    # o Python cria LC_CTYPE sozinho quando nasce sem locale (PEP 538)
+    nomes = set(filter(None, str(v.get("nomes_no_filho", "?")).split(",")))
+    registrar("variáveis no processo do aluno", sorted(nomes), "nenhuma além de LC_CTYPE", nomes <= {"LC_CTYPE"})
     registrar("nome suspeito no processo do aluno", v.get("nome_suspeito_no_filho"), "False", v.get("nome_suspeito_no_filho") is False)
     # conhecido desde a S0-04: o pai é legível; neste projeto ele só tem EXECUTOR_SEGREDO
     registrar("ambiente do pai legível", v.get("environ_do_pai_legivel"), "limitação conhecida", True)
@@ -157,8 +161,11 @@ def main():
 
     if not args.sem_memoria:
         st, r, dt = chamar(args.url, chave, MEMORIA)
-        registrar("esgotar memória", f"HTTP {st}, {r and r.get('situacao')}, {dt:.1f} s", "erro, sem derrubar",
-                  st == 200 and r and r.get("situacao") in ("erro", "tempo_excedido"))
+        # contido: ou o processo morre no limite (erro), ou a alocação falha dentro dele (MemoryError)
+        contido = st == 200 and r and (r.get("situacao") in ("erro", "tempo_excedido")
+                                       or r.get("resultados", [{}])[0].get("erro") == "MemoryError")
+        detalhe = r and (r.get("situacao"), r.get("resultados", [{}])[0].get("erro") if r.get("resultados") else None)
+        registrar("esgotar memória", f"HTTP {st}, {detalhe}, {dt:.1f} s", "contido, sem derrubar", contido)
         st, r, _ = chamar(args.url, chave, NORMAL, ([3],))
         registrar("chamada normal depois da memória", valor(r), "int 6", st == 200 and valor(r) == {"t": "int", "v": "6"})
 
