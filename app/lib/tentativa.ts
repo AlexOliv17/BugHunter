@@ -1,5 +1,6 @@
 // POST /api/tentativa (RF-05, D-20): pedido e resposta. Funções puras.
 
+import type { EstadoTentativa } from "./estado";
 import { BASE_POR_NIVEL, ehNivel, type Nivel } from "./niveis";
 
 export type PedidoTentativa =
@@ -29,6 +30,7 @@ export type LinhaExercicio = {
 
 export type RespostaTentativa = {
   tentativa: { id: string; numero: number; multiplicador_repeticao: number };
+  estado: EstadoTentativa;
   exercicio: {
     assinatura: string; descricao: string; codigo: string;
     teste_exemplo: TesteExemplo;
@@ -38,10 +40,11 @@ export type RespostaTentativa = {
 
 // Lista fechada do que vai ao navegador: nunca suite_oculta, codigo_correto,
 // linha_defeito nem categoria_codigo (RNF-03), mesmo que a linha traga mais campos.
-export function montarResposta(l: LinhaExercicio): RespostaTentativa {
+export function montarResposta(l: LinhaExercicio, estado: EstadoTentativa): RespostaTentativa {
   const nivel = ehNivel(l.nivel) ? l.nivel : "baixo";
   return {
     tentativa: { id: l.tentativa_id, numero: l.numero_tentativa, multiplicador_repeticao: l.numero_tentativa > 1 ? 0.5 : 1 },
+    estado,
     exercicio: {
       assinatura: l.assinatura,
       descricao: l.descricao,

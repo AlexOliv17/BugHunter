@@ -1,45 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
+import { reconstruirEstado } from "@/lib/estado";
+import { reduzir } from "@/lib/maquina-exercicio";
 import type { RespostaTentativa } from "@/lib/tentativa";
+import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
-import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, TesteExemplo } from "./componentes";
+
+type Aviso = { tipo: "certo" | "errado" | "erro"; texto: string };
 
 // Tela do exercício (telas 4, 5 e 6 — mesma rota em estados diferentes). Carrega a
-// tentativa pelo endpoint (D-20) e monta o layout dos protótipos (S3-01).
+// tentativa pelo endpoint (D-20), com o estado reconstruído dos eventos (RN-10).
 export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [dados, setDados] = useState<RespostaTentativa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [linhasErradas, setLinhasErradas] = useState<number[]>([]);
-  const [aviso, setAviso] = useState<{ tipo: "certo" | "errado" | "erro"; texto: string } | null>(null);
-  const [enviando, setEnviando] = useState(false);
-
-  // Clique numa linha (RF-07): o servidor compara com linha_defeito e diz só se acertou.
-  const apontar = useCallback(async (linha: number) => {
-    if (enviando) return;
-    setEnviando(true);
-    const r = await fetch("/api/localizar", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ tentativa_id: tentativaId, linha }),
-    }).catch(() => null);
-    const corpo = await r?.json().catch(() => null);
-    setEnviando(false);
-    if (!r?.ok) return setAviso({ tipo: "erro", texto: corpo?.erro ?? "Não foi possível registrar a linha agora." });
-    if (corpo.correta) setAviso({ tipo: "certo", texto: `Linha ${linha}: correta.` });
-    else {
-      setLinhasErradas((l) => [...l, linha]);
-      setAviso({ tipo: "errado", texto: corpo.concluida ? `Linha ${linha}: incorreta.` : `Linha ${linha}: incorreta. Você tem mais uma tentativa.` });
-    }
-  }, [enviando, tentativaId]);
-
-  const extensoesLocalizacao = useMemo(
-    () => modoLocalizacao({ aoApontar: apontar, linhasErradas, ativo: true }),
-    [apontar, linhasErradas],
-  );
+  const [estado, despachar] = useReducer(reduzir, reconstruirEstado([]));
+  const [aviso, setAviso] = useState<Aviso | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -51,14 +30,35 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       .then(async (r) => ({ ok: r.ok, corpo: await r.json().catch(() => null) }))
       .then(({ ok, corpo }) => {
         if (!ativo) return;
-        if (ok) setDados(corpo);
-        else setErro(corpo?.erro ?? "Não foi possível carregar o exercício.");
+        if (!ok) return setErro(corpo?.erro ?? "Não foi possível carregar o exercício.");
+        setDados(corpo);
+        despachar({ tipo: "carregou", estado: corpo.estado });
       })
       .catch(() => ativo && setErro("Não foi possível carregar o exercício."));
     return () => {
       ativo = false;
     };
   }, [tentativaId]);
+
+  // Clique numa linha (RF-07): o servidor compara com linha_defeito e diz só se acertou.
+  const apontar = useCallback(async (linha: number) => {
+    const r = await fetch("/api/localizar", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tentativa_id: tentativaId, linha }),
+    }).catch(() => null);
+    const corpo = await r?.json().catch(() => null);
+    if (!r?.ok) return setAviso({ tipo: "erro", texto: corpo?.erro ?? "Não foi possível registrar a linha agora." });
+
+    despachar({ tipo: "localizou", linha, correta: corpo.correta });
+    if (corpo.correta) setAviso({ tipo: "certo", texto: `Linha ${linha}: correta. O editor está liberado.` });
+    else if (corpo.concluida) setAviso({ tipo: "errado", texto: `Linha ${linha}: incorreta. O editor foi liberado mesmo assim, com a menor pontuação de localização.` });
+    else setAviso({ tipo: "errado", texto: `Linha ${linha}: incorreta. Você tem mais uma tentativa.` });
+  }, [tentativaId]);
+
+  const travado = !estado.editorLiberado;
+  const linhasErradas = useMemo(() => estado.localizacao.tentativas.filter((t) => !t.correta).map((t) => t.linha), [estado.localizacao.tentativas]);
+  const extensoes = useMemo(() => modoLocalizacao({ aoApontar: apontar, linhasErradas, ativo: travado }), [apontar, linhasErradas, travado]);
 
   if (erro) {
     return (
@@ -71,7 +71,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   if (!dados) return <main className="mx-auto w-full max-w-4xl px-10 py-16 text-texto-secundario">Carregando o exercício…</main>;
 
   const { exercicio, tentativa } = dados;
-  const editorTravado = true; // máquina de estados travado → liberado: S3-04
+  const restantes = 2 - estado.localizacao.tentativas.length;
 
   return (
     <main className="mx-auto grid w-full max-w-[1400px] grid-cols-[1fr_24rem] gap-8 px-10 py-8">
@@ -80,12 +80,17 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
         <Enunciado exercicio={exercicio} />
         <TesteExemplo exercicio={exercicio} />
 
-        <section aria-label="Código" className="overflow-hidden rounded border border-destaque">
-          <header className="flex items-center justify-between border-b border-destaque/60 bg-destaque/10 px-6 py-3">
-            <span className="font-semibold text-destaque">Editor travado</span>
-            <span className="text-sm text-texto-secundario">Clique na linha onde você acha que está o defeito</span>
+        <section aria-label="Código" className={`overflow-hidden rounded border ${travado ? "border-destaque" : "border-borda"}`}>
+          <header className={`flex items-center justify-between border-b px-6 py-3 ${travado ? "border-destaque/60 bg-destaque/10" : "border-borda bg-painel"}`}>
+            <span className={`font-semibold ${travado ? "text-destaque" : "text-sucesso"}`}>{travado ? "Editor travado" : "Editor destravado"}</span>
+            {travado && (
+              <span className="text-sm text-texto-secundario">
+                Clique na linha onde você acha que está o defeito · {restantes === 2 ? "2 tentativas" : "última tentativa"}
+              </span>
+            )}
           </header>
-          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={editorTravado} extensoes={extensoesLocalizacao} rotulo="Código do exercício. Clique na linha onde está o defeito." />
+          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={travado} extensoes={extensoes}
+            rotulo={travado ? "Código do exercício. Clique na linha onde está o defeito." : "Código do exercício, editável."} />
           {aviso && (
             <p role="status" className={`border-t border-borda px-6 py-3 text-sm ${aviso.tipo === "certo" ? "text-sucesso" : aviso.tipo === "errado" ? "text-perigo" : "text-texto-secundario"}`}>
               {aviso.texto}
@@ -93,13 +98,13 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
           )}
         </section>
 
-        <BarraAcoes editorTravado={editorTravado} />
+        <BarraAcoes editorTravado={travado} />
       </div>
 
       <aside className="flex flex-col gap-6">
-        <PainelPontuacao exercicio={exercicio} multiplicadorRepeticao={tentativa.multiplicador_repeticao} />
-        {editorTravado && <AvisoLocalizacao />}
-        <PainelDicas editorTravado={editorTravado} />
+        <PainelPontuacao exercicio={exercicio} multiplicadorRepeticao={tentativa.multiplicador_repeticao} localizacao={estado.localizacao} />
+        {travado && <AvisoLocalizacao />}
+        <PainelDicas editorTravado={travado} />
       </aside>
     </main>
   );

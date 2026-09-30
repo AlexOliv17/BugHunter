@@ -2,6 +2,7 @@
 // Corpo: { tema, nivel } para Começar, ou { tentativa_id } para retomar uma aberta.
 // Devolve só o exercício da tentativa aberta do próprio aluno (D-20).
 
+import { reconstruirEstado, type Evento } from "@/lib/estado";
 import { usuarioAtual } from "@/lib/sessao";
 import { criarClienteServico } from "@/lib/supabase/servico";
 import { lerPedido, montarResposta, type LinhaExercicio } from "@/lib/tentativa";
@@ -33,5 +34,10 @@ export async function POST(request: Request) {
   if (!linha) return erro(404, "Tentativa não encontrada.");
   if (linha.desfecho !== "aberto") return erro(409, "Esta tentativa já foi encerrada.");
 
-  return Response.json(montarResposta(linha), { headers: { "cache-control": "no-store" } });
+  // RN-10: a tentativa volta no estado reconstruído a partir dos eventos
+  const { data: eventos, error: erroEventos } = await banco
+    .from("eventos").select("tipo, payload").eq("tentativa_id", tentativaId).order("em").order("id");
+  if (erroEventos) return erro(500, "Não foi possível carregar o exercício agora.");
+
+  return Response.json(montarResposta(linha, reconstruirEstado(eventos as Evento[])), { headers: { "cache-control": "no-store" } });
 }

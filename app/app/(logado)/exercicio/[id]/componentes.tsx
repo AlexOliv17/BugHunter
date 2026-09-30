@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 
+import type { EstadoLocalizacao } from "@/lib/estado";
 import type { RespostaTentativa } from "@/lib/tentativa";
 
 type Exercicio = RespostaTentativa["exercicio"];
@@ -56,9 +57,20 @@ export function TesteExemplo({ exercicio }: { exercicio: Exercicio }) {
   );
 }
 
-export function PainelPontuacao({ exercicio, multiplicadorRepeticao }: { exercicio: Exercicio; multiplicadorRepeticao: number }) {
-  // Cálculo ao vivo do PDR e o efeito de cada componente: S4-03 e S4-04 (RF-14).
-  const emJogo = Math.round(exercicio.base * multiplicadorRepeticao);
+const EFEITO_LOCALIZACAO: Record<string, [string, string, string]> = {
+  "1": ["Localização na 1ª", "cheio", "text-sucesso"],
+  "0.6": ["Localização na 2ª", "−16%", "text-perigo"],
+  "0.3": ["Localização não acertada", "−28%", "text-perigo"],
+};
+
+export function PainelPontuacao({ exercicio, multiplicadorRepeticao, localizacao }: {
+  exercicio: Exercicio; multiplicadorRepeticao: number; localizacao?: EstadoLocalizacao;
+}) {
+  // O cálculo completo do PDR ao vivo, com reparo e dica, é a S4-03 e a S4-04 (RF-14).
+  // Aqui só o efeito da localização (40% × fator, RN-05) e da repetição.
+  const fator = localizacao?.fator ?? 1;
+  const emJogo = Math.round(exercicio.base * (0.4 * fator + 0.6) * multiplicadorRepeticao);
+  const efeito = localizacao?.fator != null ? EFEITO_LOCALIZACAO[String(localizacao.fator)] : null;
   return (
     <section aria-label="Pontuação" className="rounded border border-borda bg-painel p-8">
       <div className="flex items-baseline justify-between">
@@ -70,7 +82,10 @@ export function PainelPontuacao({ exercicio, multiplicadorRepeticao }: { exercic
         {multiplicadorRepeticao < 1 && (
           <div className="flex justify-between"><dt className="text-texto-secundario">Repetição do exercício</dt><dd className="font-mono text-perigo">−50%</dd></div>
         )}
-        {multiplicadorRepeticao === 1 && (
+        {efeito && (
+          <div className="flex justify-between"><dt className="text-texto-secundario">{efeito[0]}</dt><dd className={`font-mono ${efeito[2]}`}>{efeito[1]}</dd></div>
+        )}
+        {multiplicadorRepeticao === 1 && !efeito && (
           <div className="flex justify-between"><dt className="text-texto-apagado">Nenhuma penalidade ainda</dt><dd className="text-texto-apagado">—</dd></div>
         )}
       </dl>

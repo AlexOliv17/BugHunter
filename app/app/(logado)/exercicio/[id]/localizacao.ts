@@ -35,9 +35,11 @@ const tema = EditorView.baseTheme({
   },
 });
 
-export function modoLocalizacao(opcoes: { aoApontar: (linha: number) => void; linhasErradas: number[]; ativo: boolean }): Extension {
+export function modoLocalizacao(opcoes: { aoApontar: (linha: number) => Promise<void> | void; linhasErradas: number[]; ativo: boolean }): Extension {
   if (!opcoes.ativo) return [];
   const erradas = new Set(opcoes.linhasErradas);
+  // um clique por vez: um clique duplo numa linha errada não pode gastar as duas tentativas
+  let ocupado = false;
 
   const decoracoes = EditorView.decorations.compute([linhaSobCursor], (estado): DecorationSet => {
     const b = new RangeSetBuilder<Decoration>();
@@ -72,7 +74,9 @@ export function modoLocalizacao(opcoes: { aoApontar: (linha: number) => void; li
       },
       mousedown(e, view) {
         const n = linhaDoEvento(view, e);
-        if (!erradas.has(n)) opcoes.aoApontar(n);
+        if (ocupado || erradas.has(n)) return true;
+        ocupado = true;
+        Promise.resolve(opcoes.aoApontar(n)).finally(() => { ocupado = false; });
         return true;
       },
     }),
