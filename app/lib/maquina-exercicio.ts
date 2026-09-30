@@ -2,13 +2,14 @@
 // Redutor puro. As transições só acontecem com respostas do servidor, que é quem
 // compara a linha e grava os eventos; o navegador nunca decide que acertou.
 
-import { estadoLocalizacao, type EstadoTentativa, type UsoPrecheck } from "./estado";
+import { estadoLocalizacao, type EstadoTentativa, type ResultadoVerificacao, type UsoPrecheck } from "./estado";
 
 export type Acao =
   | { tipo: "carregou"; estado: EstadoTentativa }
   | { tipo: "localizou"; linha: number; correta: boolean }
   | { tipo: "editou"; codigo: string }
-  | { tipo: "precheck"; uso: UsoPrecheck };
+  | { tipo: "precheck"; uso: UsoPrecheck }
+  | { tipo: "verificou"; resultado: ResultadoVerificacao; encerrada: boolean };
 
 export function reduzir(estado: EstadoTentativa, acao: Acao): EstadoTentativa {
   switch (acao.tipo) {
@@ -25,5 +26,13 @@ export function reduzir(estado: EstadoTentativa, acao: Acao): EstadoTentativa {
     case "precheck":
       // o número do uso vem do servidor, que recusa o quarto (RN-02)
       return { ...estado, prechecks: { usados: acao.uso.numero_uso, ultimo: acao.uso } };
+    case "verificou":
+      // resultado e encerramento vêm do servidor, que é quem roda e compara (RN-03)
+      if (estado.encerrada) return estado;
+      return {
+        ...estado,
+        verificacoes: [...estado.verificacoes, acao.resultado],
+        encerrada: acao.encerrada ? { desfecho: "resolvido" } : null,
+      };
   }
 }

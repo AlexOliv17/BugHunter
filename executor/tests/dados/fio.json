@@ -1,0 +1,16 @@
+{
+  "_sobre": "Representação em fio (S4-01): cada fonte JSON, lida pelo Python e pelo servidor Next.js, deve dar o mesmo fio. Usado pelos testes dos dois lados.",
+  "casos": [
+    {"fonte": "8", "fio": {"t": "int", "v": "8"}},
+    {"fonte": "8.0", "fio": {"t": "float", "v": "8.0"}},
+    {"fonte": "-3", "fio": {"t": "int", "v": "-3"}},
+    {"fonte": "0.1", "fio": {"t": "float", "v": "0.1"}},
+    {"fonte": "1e+20", "fio": {"t": "float", "v": "1e+20"}},
+    {"fonte": "123456789012345678901234567890", "fio": {"t": "int", "v": "123456789012345678901234567890"}},
+    {"fonte": "true", "fio": {"t": "bool", "v": true}},
+    {"fonte": "\"ação\"", "fio": {"t": "str", "v": "ação"}},
+    {"fonte": "null", "fio": {"t": "none"}},
+    {"fonte": "[1, 2.5, \"a\", [false]]", "fio": {"t": "list", "v": [{"t": "int", "v": "1"}, {"t": "float", "v": "2.5"}, {"t": "str", "v": "a"}, {"t": "list", "v": [{"t": "bool", "v": false}]}]}},
+    {"fonte": "{\"a\": 1, \"b\": [2.0]}", "fio": {"t": "dict", "v": {"a": {"t": "int", "v": "1"}, "b": {"t": "list", "v": [{"t": "float", "v": "2.0"}]}}}}
+  ]
+}

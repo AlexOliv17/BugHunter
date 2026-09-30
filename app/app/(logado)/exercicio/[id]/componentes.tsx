@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 
-import type { EstadoLocalizacao } from "@/lib/estado";
+import type { EstadoLocalizacao, ResultadoVerificacao } from "@/lib/estado";
 import type { ResultadoPrecheck } from "@/lib/precheck";
 import type { RespostaTentativa } from "@/lib/tentativa";
 
@@ -143,10 +143,13 @@ export function PainelDicas({ editorTravado }: { editorTravado: boolean }) {
 
 export type EstadoBotaoPrecheck = { usados: number; limite: number; disponivel: boolean; preparando: boolean; executando: boolean };
 
-export function BarraAcoes({ editorTravado, precheck, aoPrecheck }: {
+export type EstadoBotaoVerificar = { disponivel: boolean; executando: boolean };
+
+export function BarraAcoes({ editorTravado, precheck, aoPrecheck, verificar, aoVerificar }: {
   editorTravado: boolean; precheck: EstadoBotaoPrecheck; aoPrecheck: () => void;
+  verificar: EstadoBotaoVerificar; aoVerificar: () => void;
 }) {
-  // Verificar: S4-02. Desistir (disponível desde o início, D-17): S5-06.
+  // Desistir (disponível desde o início, D-17): S5-06.
   // O contador mostra os usos consumidos: 3/3 quando esgota (RF-09).
   const rotulo = precheck.executando ? "Rodando…" : precheck.preparando && precheck.disponivel ? "Preparando o ambiente…" : "Precheck";
   return (
@@ -156,7 +159,10 @@ export function BarraAcoes({ editorTravado, precheck, aoPrecheck }: {
         className="h-14 rounded border border-borda px-8 font-semibold transition-colors enabled:text-texto enabled:hover:border-texto-apagado disabled:text-texto-apagado">
         {rotulo} <span id="precheck-contador" className="font-mono text-sm font-normal text-texto-secundario">{precheck.usados}/{precheck.limite}</span>
       </button>
-      <button type="button" disabled className="h-14 rounded border border-borda px-8 font-semibold text-texto-apagado">Verificar</button>
+      <button type="button" onClick={aoVerificar} disabled={!verificar.disponivel || verificar.executando}
+        className="h-14 rounded border border-destaque bg-destaque px-8 font-semibold text-sobre-destaque transition-opacity enabled:hover:opacity-90 disabled:border-borda disabled:bg-transparent disabled:text-texto-apagado">
+        {verificar.executando ? "Verificando…" : "Verificar"}
+      </button>
       {editorTravado && <span className="text-sm text-texto-apagado">Disponíveis após você apontar a linha</span>}
       {!editorTravado && precheck.usados >= precheck.limite && <span className="text-sm text-texto-apagado">Os 3 Prechecks desta tentativa foram usados</span>}
       <button type="button" disabled className="ml-auto h-14 rounded border border-borda px-6 font-semibold text-perigo/60">
@@ -191,6 +197,43 @@ export function ResultadoDoPrecheck({ resultado, uso, limite, exercicio }: {
             : resultado.resultado === "erro" ? resultado.erro : "passou de 2 segundos e foi interrompido"}
         </code>
         <p className="text-texto-secundario">O Precheck roda só este teste. O Verificar roda a suíte completa, com casos de borda.</p>
+      </div>
+    </section>
+  );
+}
+
+// Resultado do Verificar (RF-10): quantos testes passaram do total, nunca o conteúdo
+// dos testes (RN-03). Sem sucesso: −0,25 no reparo e dicas 2 e 3 liberáveis.
+export function ResultadoDoVerificar({ resultado, numero, pdrFinal }: {
+  resultado: ResultadoVerificacao; numero: number; pdrFinal: number | null;
+}) {
+  const passou = resultado.resultado === "passou";
+  const titulo = passou ? "Todos os testes passaram"
+    : resultado.resultado === "tempo_excedido" ? "Tempo excedido"
+    : resultado.resultado === "erro" ? "O código lançou um erro" : "Algum teste falhou";
+  const detalhe = passou
+    ? "Exercício resolvido."
+    : resultado.resultado === "tempo_excedido"
+      ? "A suíte passou de 5 segundos e foi interrompida. Procure um laço que não termina."
+      : resultado.resultado === "erro"
+        ? "Em algum caso da suíte o código lançou uma exceção."
+        : "O código devolveu um valor diferente do esperado em algum caso da suíte.";
+  return (
+    <section aria-label="Resultado do Verificar" role="status"
+      className={`rounded border ${passou ? "border-sucesso/40 bg-sucesso/5" : "border-perigo/40 bg-perigo/5"}`}>
+      <header className={`flex items-center justify-between border-b px-6 py-3 ${passou ? "border-sucesso/30" : "border-perigo/30"}`}>
+        <span className={`font-semibold ${passou ? "text-sucesso" : "text-perigo"}`}>{titulo}</span>
+        <span className="text-sm text-texto-secundario">Verificar {numero} · suíte completa</span>
+      </header>
+      <div className="flex items-center justify-between gap-6 px-6 py-4 text-sm">
+        <p className="text-texto-secundario">
+          {detalhe}
+          {!passou && " O fator de reparo caiu 0,25, e as dicas 2 e 3 podem ser liberadas."}
+        </p>
+        <span className="shrink-0 font-mono">
+          <span className={passou ? "text-sucesso" : "text-perigo"}>{resultado.passados}</span> de {resultado.total} testes
+          {passou && pdrFinal !== null && <span className="ml-4 text-destaque">PDR final {pdrFinal}</span>}
+        </span>
       </div>
     </section>
   );
