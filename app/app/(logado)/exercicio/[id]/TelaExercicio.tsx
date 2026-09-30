@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { reconstruirEstado } from "@/lib/estado";
+import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
 import { reduzir } from "@/lib/maquina-exercicio";
 import type { RespostaTentativa } from "@/lib/tentativa";
 import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
+import { marcasDeEdicao } from "./marcas-edicao";
 
 type Aviso = { tipo: "certo" | "errado" | "erro"; texto: string };
 
@@ -19,6 +21,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [erro, setErro] = useState<string | null>(null);
   const [estado, despachar] = useReducer(reduzir, reconstruirEstado([]));
   const [aviso, setAviso] = useState<Aviso | null>(null);
+  const [codigoAtual, setCodigoAtual] = useState<string | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -58,7 +61,13 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
 
   const travado = !estado.editorLiberado;
   const linhasErradas = useMemo(() => estado.localizacao.tentativas.filter((t) => !t.correta).map((t) => t.linha), [estado.localizacao.tentativas]);
-  const extensoes = useMemo(() => modoLocalizacao({ aoApontar: apontar, linhasErradas, ativo: travado }), [apontar, linhasErradas, travado]);
+  const original = dados?.exercicio.codigo ?? "";
+  const extensoes = useMemo(
+    () => (travado ? modoLocalizacao({ aoApontar: apontar, linhasErradas, ativo: true }) : marcasDeEdicao(original)),
+    [apontar, linhasErradas, travado, original],
+  );
+  // RN-08: linhas alteradas em relação ao código recebido; informativo (D-02)
+  const alteradas = useMemo(() => contarLinhasAlteradas(original, codigoAtual ?? original), [original, codigoAtual]);
 
   if (erro) {
     return (
@@ -83,13 +92,18 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
         <section aria-label="Código" className={`overflow-hidden rounded border ${travado ? "border-destaque" : "border-borda"}`}>
           <header className={`flex items-center justify-between border-b px-6 py-3 ${travado ? "border-destaque/60 bg-destaque/10" : "border-borda bg-painel"}`}>
             <span className={`font-semibold ${travado ? "text-destaque" : "text-sucesso"}`}>{travado ? "Editor travado" : "Editor destravado"}</span>
-            {travado && (
+            {travado ? (
               <span className="text-sm text-texto-secundario">
                 Clique na linha onde você acha que está o defeito · {restantes === 2 ? "2 tentativas" : "última tentativa"}
               </span>
+            ) : (
+              <span role="status" className={`font-mono text-sm ${alteradas > LIMITE_ALERTA ? "font-semibold text-perigo" : "text-destaque"}`}>
+                {alteradas} {alteradas === 1 ? "linha alterada" : "linhas alteradas"}
+                {alteradas > LIMITE_ALERTA && " · acima de 3: corrija o defeito, não reescreva a função"}
+              </span>
             )}
           </header>
-          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={travado} extensoes={extensoes}
+          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={travado} extensoes={extensoes} aoMudar={setCodigoAtual}
             rotulo={travado ? "Código do exercício. Clique na linha onde está o defeito." : "Código do exercício, editável."} />
           {aviso && (
             <p role="status" className={`border-t border-borda px-6 py-3 text-sm ${aviso.tipo === "certo" ? "text-sucesso" : aviso.tipo === "errado" ? "text-perigo" : "text-texto-secundario"}`}>
