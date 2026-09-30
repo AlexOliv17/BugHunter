@@ -5,12 +5,14 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { reconstruirEstado } from "@/lib/estado";
 import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
+import { LIMITE_USOS, nomeDaFuncao, precheckDisponivel, type ResultadoPrecheck } from "@/lib/precheck";
 import { reduzir } from "@/lib/maquina-exercicio";
 import type { RespostaTentativa } from "@/lib/tentativa";
-import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, TesteExemplo } from "./componentes";
+import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
 import { marcasDeEdicao } from "./marcas-edicao";
+import { usePrecheck } from "./usePrecheck";
 
 type Aviso = { tipo: "certo" | "errado" | "erro"; texto: string };
 
@@ -22,6 +24,9 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [estado, despachar] = useReducer(reduzir, reconstruirEstado([]));
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const [codigoAtual, setCodigoAtual] = useState<string | null>(null);
+  const precheck = usePrecheck();
+  const [usosPrecheck, setUsosPrecheck] = useState(0);
+  const [ultimoPrecheck, setUltimoPrecheck] = useState<{ resultado: ResultadoPrecheck; uso: number } | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -69,6 +74,20 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   // RN-08: linhas alteradas em relação ao código recebido; informativo (D-02)
   const alteradas = useMemo(() => contarLinhasAlteradas(original, codigoAtual ?? original), [original, codigoAtual]);
 
+  // Precheck (RF-09): só o teste de exemplo, no navegador; não altera a pontuação.
+  const rodarPrecheck = async () => {
+    if (!dados || !precheckDisponivel(usosPrecheck, estado.editorLiberado)) return;
+    if (precheck.ambiente !== "pronto") return;   // ainda carregando: não consome uso (decisão 1.7)
+    const uso = usosPrecheck + 1;
+    setUsosPrecheck(uso);                           // conta também o que estourar o tempo (D-10)
+    const t = dados.exercicio.teste_exemplo;
+    const resultado = await precheck.executar({
+      codigo: codigoAtual ?? dados.exercicio.codigo, funcao: nomeDaFuncao(dados.exercicio.assinatura),
+      entrada: t.entrada, esperado: t.esperado,
+    });
+    setUltimoPrecheck({ resultado, uso });
+  };
+
   if (erro) {
     return (
       <main className="mx-auto w-full max-w-4xl px-10 py-16">
@@ -112,7 +131,15 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
           )}
         </section>
 
-        <BarraAcoes editorTravado={travado} />
+        {ultimoPrecheck && (
+          <ResultadoDoPrecheck resultado={ultimoPrecheck.resultado} uso={ultimoPrecheck.uso} limite={LIMITE_USOS} exercicio={exercicio} />
+        )}
+
+        <BarraAcoes editorTravado={travado} aoPrecheck={rodarPrecheck} precheck={{
+          usados: usosPrecheck, limite: LIMITE_USOS,
+          disponivel: precheckDisponivel(usosPrecheck, estado.editorLiberado),
+          preparando: precheck.ambiente === "carregando", executando: precheck.ambiente === "executando",
+        }} />
       </div>
 
       <aside className="flex flex-col gap-6">
