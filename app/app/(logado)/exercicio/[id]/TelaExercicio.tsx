@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { RespostaTentativa } from "@/lib/tentativa";
 import { EditorCodigo } from "./EditorCodigo";
+import { modoLocalizacao } from "./localizacao";
 import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, TesteExemplo } from "./componentes";
 
 // Tela do exercício (telas 4, 5 e 6 — mesma rota em estados diferentes). Carrega a
@@ -12,6 +13,33 @@ import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPo
 export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [dados, setDados] = useState<RespostaTentativa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [linhasErradas, setLinhasErradas] = useState<number[]>([]);
+  const [aviso, setAviso] = useState<{ tipo: "certo" | "errado" | "erro"; texto: string } | null>(null);
+  const [enviando, setEnviando] = useState(false);
+
+  // Clique numa linha (RF-07): o servidor compara com linha_defeito e diz só se acertou.
+  const apontar = useCallback(async (linha: number) => {
+    if (enviando) return;
+    setEnviando(true);
+    const r = await fetch("/api/localizar", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tentativa_id: tentativaId, linha }),
+    }).catch(() => null);
+    const corpo = await r?.json().catch(() => null);
+    setEnviando(false);
+    if (!r?.ok) return setAviso({ tipo: "erro", texto: corpo?.erro ?? "Não foi possível registrar a linha agora." });
+    if (corpo.correta) setAviso({ tipo: "certo", texto: `Linha ${linha}: correta.` });
+    else {
+      setLinhasErradas((l) => [...l, linha]);
+      setAviso({ tipo: "errado", texto: corpo.concluida ? `Linha ${linha}: incorreta.` : `Linha ${linha}: incorreta. Você tem mais uma tentativa.` });
+    }
+  }, [enviando, tentativaId]);
+
+  const extensoesLocalizacao = useMemo(
+    () => modoLocalizacao({ aoApontar: apontar, linhasErradas, ativo: true }),
+    [apontar, linhasErradas],
+  );
 
   useEffect(() => {
     let ativo = true;
@@ -57,7 +85,12 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
             <span className="font-semibold text-destaque">Editor travado</span>
             <span className="text-sm text-texto-secundario">Clique na linha onde você acha que está o defeito</span>
           </header>
-          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={editorTravado} />
+          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={editorTravado} extensoes={extensoesLocalizacao} rotulo="Código do exercício. Clique na linha onde está o defeito." />
+          {aviso && (
+            <p role="status" className={`border-t border-borda px-6 py-3 text-sm ${aviso.tipo === "certo" ? "text-sucesso" : aviso.tipo === "errado" ? "text-perigo" : "text-texto-secundario"}`}>
+              {aviso.texto}
+            </p>
+          )}
         </section>
 
         <BarraAcoes editorTravado={editorTravado} />
