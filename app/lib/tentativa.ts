@@ -1,5 +1,6 @@
 // POST /api/tentativa (RF-05, D-20): pedido e resposta. Funções puras.
 
+import type { EstadoTentativa } from "./estado";
 import { BASE_POR_NIVEL, ehNivel, type Nivel } from "./niveis";
 
 export type PedidoTentativa =
@@ -18,33 +19,40 @@ export function lerPedido(corpo: unknown): PedidoTentativa | null {
   return null;
 }
 
+export type TesteExemplo = { chamada: string; entrada: unknown[]; esperado: unknown; entrada_repr: string; esperado_repr: string };
+
 export type LinhaExercicio = {
   tentativa_id: string; numero_tentativa: number; desfecho: string;
   codigo_com_defeito: string; assinatura: string; descricao: string;
-  teste_exemplo: { chamada: string; entrada: unknown[]; esperado: unknown };
+  teste_exemplo: TesteExemplo;
   tema_codigo: string; nivel: string;
 };
 
 export type RespostaTentativa = {
   tentativa: { id: string; numero: number; multiplicador_repeticao: number };
+  estado: EstadoTentativa;
   exercicio: {
     assinatura: string; descricao: string; codigo: string;
-    teste_exemplo: { chamada: string; entrada: unknown[]; esperado: unknown };
+    teste_exemplo: TesteExemplo;
     tema: string; nivel: Nivel; base: number;
   };
 };
 
 // Lista fechada do que vai ao navegador: nunca suite_oculta, codigo_correto,
 // linha_defeito nem categoria_codigo (RNF-03), mesmo que a linha traga mais campos.
-export function montarResposta(l: LinhaExercicio): RespostaTentativa {
+export function montarResposta(l: LinhaExercicio, estado: EstadoTentativa): RespostaTentativa {
   const nivel = ehNivel(l.nivel) ? l.nivel : "baixo";
   return {
     tentativa: { id: l.tentativa_id, numero: l.numero_tentativa, multiplicador_repeticao: l.numero_tentativa > 1 ? 0.5 : 1 },
+    estado,
     exercicio: {
       assinatura: l.assinatura,
       descricao: l.descricao,
       codigo: l.codigo_com_defeito,
-      teste_exemplo: { chamada: l.teste_exemplo.chamada, entrada: l.teste_exemplo.entrada, esperado: l.teste_exemplo.esperado },
+      teste_exemplo: {
+        chamada: l.teste_exemplo.chamada, entrada: l.teste_exemplo.entrada, esperado: l.teste_exemplo.esperado,
+        entrada_repr: l.teste_exemplo.entrada_repr, esperado_repr: l.teste_exemplo.esperado_repr,
+      },
       tema: l.tema_codigo,
       nivel,
       base: BASE_POR_NIVEL[nivel],

@@ -22,3 +22,6 @@ venv/
 /prompt_base_agente.md
 /Prototipagem BugHunter/
 /app/public/pyodide/
+
+# pré-visualização local com dados fictícios, nunca versionar
+/app/app/previa-local/

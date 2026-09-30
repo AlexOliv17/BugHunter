@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { reconstruirEstado } from "../estado";
 import { lerPedido, montarResposta, type LinhaExercicio } from "../tentativa";
+
+const vazio = reconstruirEstado([]);
 
 describe("lerPedido", () => {
   it("aceita Começar com tema e nível", () => {
@@ -19,20 +22,20 @@ describe("lerPedido", () => {
 const linha = {
   tentativa_id: "t1", numero_tentativa: 1, desfecho: "aberto",
   codigo_com_defeito: "def f(x):\n    return x - 1", assinatura: "f(x)", descricao: "d",
-  teste_exemplo: { chamada: "f(1)", entrada: [1], esperado: 2 },
+  teste_exemplo: { chamada: "f(1)", entrada: [1], esperado: 2, entrada_repr: "1", esperado_repr: "2" },
   tema_codigo: "fundamentos", nivel: "medio",
 } satisfies LinhaExercicio;
 
 describe("montarResposta (D-20, RNF-03)", () => {
   it("não deixa passar nenhum dos quatro segredos, mesmo que a linha os traga", () => {
     const suja = { ...linha, suite_oculta: "S", codigo_correto: "C", linha_defeito: 2, categoria_codigo: "ARIT_TROC" };
-    const texto = JSON.stringify(montarResposta(suja));
+    const texto = JSON.stringify(montarResposta(suja, vazio));
     for (const segredo of ["suite_oculta", "codigo_correto", "linha_defeito", "categoria_codigo", "ARIT_TROC"])
       expect(texto).not.toContain(segredo);
   });
   it("informa a base do nível e o multiplicador de repetição (RN-05, RN-07)", () => {
-    expect(montarResposta(linha).exercicio.base).toBe(200);
-    expect(montarResposta(linha).tentativa.multiplicador_repeticao).toBe(1);
-    expect(montarResposta({ ...linha, numero_tentativa: 2 }).tentativa.multiplicador_repeticao).toBe(0.5);
+    expect(montarResposta(linha, vazio).exercicio.base).toBe(200);
+    expect(montarResposta(linha, vazio).tentativa.multiplicador_repeticao).toBe(1);
+    expect(montarResposta({ ...linha, numero_tentativa: 2 }, vazio).tentativa.multiplicador_repeticao).toBe(0.5);
   });
 });

@@ -104,7 +104,10 @@ def carregar_programa(arquivo: Path) -> ProgramaBase:
         id=id_programa(dados["tema_codigo"], nome), tema_codigo=dados["tema_codigo"],
         nome_funcao=nome, assinatura=dados["assinatura"], descricao=dados["descricao"],
         codigo_correto=codigo, categorias=categorias,
-        teste_exemplo={"chamada": exemplo["chamada"], "entrada": exemplo["entrada"], "esperado": exemplo["esperado"]},
+        teste_exemplo={"chamada": exemplo["chamada"], "entrada": exemplo["entrada"], "esperado": exemplo["esperado"],
+                       # texto como o Python mostra: o JSON não distingue 8.0 de 8 na tela
+                       "entrada_repr": ", ".join(repr(a) for a in exemplo["entrada"]),
+                       "esperado_repr": repr(exemplo["esperado"])},
         suite_oculta=[{"entrada": c["entrada"], "esperado": c["esperado"]} for c in suite],
         arquivo=arquivo.name,
     )
