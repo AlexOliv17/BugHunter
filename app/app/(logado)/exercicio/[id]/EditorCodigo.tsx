@@ -53,7 +53,9 @@ export function EditorCodigo({ codigo, somenteLeitura, aoMudar, extensoes = [], 
   const leitura = useRef(new Compartment());
   const extras = useRef(new Compartment());
   const aoMudarAtual = useRef(aoMudar);
-  aoMudarAtual.current = aoMudar;
+  useEffect(() => {
+    aoMudarAtual.current = aoMudar;
+  }, [aoMudar]);
 
   useEffect(() => {
     if (!hospedeiro.current) return;
