@@ -8,7 +8,7 @@ import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
 import { LIMITE_USOS, nomeDaFuncao, obtidoDoResultado, precheckDisponivel, resultadoDoUso } from "@/lib/precheck";
 import { reduzir } from "@/lib/maquina-exercicio";
 import type { RespostaTentativa } from "@/lib/tentativa";
-import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, TesteExemplo } from "./componentes";
+import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
 import { marcasDeEdicao } from "./marcas-edicao";
@@ -27,6 +27,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [rascunho, setRascunho] = useState<string | null>(null);
   const precheck = usePrecheck();
   const [enviando, setEnviando] = useState(false);   // cobre os dois POSTs e a execução
+  const [verificando, setVerificando] = useState(false);
+  const [pdrFinal, setPdrFinal] = useState<number | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -65,6 +67,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   }, [tentativaId]);
 
   const travado = !estado.editorLiberado;
+  const encerrada = estado.encerrada !== null;
+  const ocupado = enviando || verificando;
   const linhasErradas = useMemo(() => estado.localizacao.tentativas.filter((t) => !t.correta).map((t) => t.linha), [estado.localizacao.tentativas]);
   const original = dados?.exercicio.codigo ?? "";
   const extensoes = useMemo(
@@ -89,8 +93,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   // O código é registrado antes (evento editou, RN-12) e o uso depois; o número do
   // uso vem do servidor, que recusa o quarto (RN-02).
   const rodarPrecheck = async () => {
-    if (!dados || !precheckDisponivel(usados, estado.editorLiberado)) return;
-    if (enviando || precheck.ambiente !== "pronto") return;   // ainda carregando: não consome uso (decisão 1.7)
+    if (!dados || encerrada || !precheckDisponivel(usados, estado.editorLiberado)) return;
+    if (ocupado || precheck.ambiente !== "pronto") return;   // ainda carregando: não consome uso (decisão 1.7)
     setEnviando(true);
     try {
       await registrarEExecutar(dados, codigoNoEditor);
@@ -116,6 +120,25 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
     despachar({ tipo: "precheck", uso: { resultado: resultado.resultado, obtido, numero_uso: registro.corpo.numero_uso } });
   };
 
+  // Verificar (RF-10): o servidor grava o código, roda a suíte oculta e compara.
+  const rodarVerificar = async () => {
+    if (!dados || travado || encerrada || ocupado) return;
+    const codigo = codigoNoEditor;
+    setVerificando(true);
+    try {
+      const r = await postar("/api/verificar", { codigo });
+      if (!r.ok) return setAviso({ tipo: "erro", texto: r.corpo?.erro ?? "Não foi possível verificar agora." });
+      setAviso(null);
+      despachar({ tipo: "editou", codigo });
+      despachar({ tipo: "verificou", encerrada: r.corpo.encerrada === true,
+        resultado: { resultado: r.corpo.resultado, passados: r.corpo.passados, total: r.corpo.total } });
+      if (typeof r.corpo.pdr_final === "number") setPdrFinal(r.corpo.pdr_final);
+    } finally {
+      setVerificando(false);
+    }
+  };
+  const ultimoVerificar = estado.verificacoes.at(-1);
+
   if (erro) {
     return (
       <main className="mx-auto w-full max-w-4xl px-10 py-16">
@@ -138,7 +161,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
 
         <section aria-label="Código" className={`overflow-hidden rounded border ${travado ? "border-destaque" : "border-borda"}`}>
           <header className={`flex items-center justify-between border-b px-6 py-3 ${travado ? "border-destaque/60 bg-destaque/10" : "border-borda bg-painel"}`}>
-            <span className={`font-semibold ${travado ? "text-destaque" : "text-sucesso"}`}>{travado ? "Editor travado" : "Editor destravado"}</span>
+            <span className={`font-semibold ${travado ? "text-destaque" : "text-sucesso"}`}>{travado ? "Editor travado" : encerrada ? "Tentativa encerrada" : "Editor destravado"}</span>
             {travado ? (
               <span className="text-sm text-texto-secundario">
                 Clique na linha onde você acha que está o defeito · {restantes === 2 ? "2 tentativas" : "última tentativa"}
@@ -150,7 +173,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
               </span>
             )}
           </header>
-          <EditorCodigo codigo={estado.codigoAtual ?? exercicio.codigo} somenteLeitura={travado} extensoes={extensoes} aoMudar={setRascunho}
+          <EditorCodigo codigo={estado.codigoAtual ?? exercicio.codigo} somenteLeitura={travado || encerrada} extensoes={extensoes} aoMudar={setRascunho}
             rotulo={travado ? "Código do exercício. Clique na linha onde está o defeito." : "Código do exercício, editável."} />
           {aviso && (
             <p role="status" className={`border-t border-borda px-6 py-3 text-sm ${aviso.tipo === "certo" ? "text-sucesso" : aviso.tipo === "errado" ? "text-perigo" : "text-texto-secundario"}`}>
@@ -163,11 +186,15 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
           <ResultadoDoPrecheck resultado={resultadoDoUso(estado.prechecks.ultimo)} uso={estado.prechecks.ultimo.numero_uso} limite={LIMITE_USOS} exercicio={exercicio} />
         )}
 
+        {ultimoVerificar && (
+          <ResultadoDoVerificar resultado={ultimoVerificar} numero={estado.verificacoes.length} pdrFinal={pdrFinal} />
+        )}
+
         <BarraAcoes editorTravado={travado} aoPrecheck={rodarPrecheck} precheck={{
           usados, limite: LIMITE_USOS,
-          disponivel: precheckDisponivel(usados, estado.editorLiberado),
+          disponivel: !encerrada && !verificando && precheckDisponivel(usados, estado.editorLiberado),
           preparando: precheck.ambiente === "carregando", executando: enviando || precheck.ambiente === "executando",
-        }} />
+        }} aoVerificar={rodarVerificar} verificar={{ disponivel: !travado && !encerrada && !enviando, executando: verificando }} />
       </div>
 
       <aside className="flex flex-col gap-6">

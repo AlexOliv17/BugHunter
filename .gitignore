@@ -25,3 +25,6 @@ venv/
 
 # pré-visualização local com dados fictícios, nunca versionar
 /app/app/previa-local/
+
+# configuração local do Claude Code (servidor de pré-visualização)
+/.claude/

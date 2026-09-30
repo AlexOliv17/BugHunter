@@ -51,6 +51,20 @@ describe("reconstruirEstado: edições e prechecks (S3-07)", () => {
   });
 });
 
+describe("reconstruirEstado: Verificar e encerramento (S4-02)", () => {
+  it("guarda os Verificar na ordem e o encerramento", () => {
+    const e = reconstruirEstado([loc(4, true, 1),
+      { tipo: "verificar", payload: { resultado: "falhou", passados: 3, total: 5 } },
+      { tipo: "verificar", payload: { resultado: "passou", passados: 5, total: 5 } },
+      { tipo: "encerrou", payload: { desfecho: "resolvido" } }]);
+    expect(e.verificacoes).toEqual([{ resultado: "falhou", passados: 3, total: 5 }, { resultado: "passou", passados: 5, total: 5 }]);
+    expect(e.encerrada).toEqual({ desfecho: "resolvido" });
+  });
+  it("sem eventos: nenhum Verificar, aberta", () => {
+    expect([reconstruirEstado([]).verificacoes, reconstruirEstado([]).encerrada]).toEqual([[], null]);
+  });
+});
+
 describe("máquina de estados do editor (S3-04)", () => {
   const inicial = reconstruirEstado([]);
   it("acerto na 1ª destrava", () => {
@@ -74,6 +88,13 @@ describe("máquina de estados do editor (S3-04)", () => {
   it("precheck registrado atualiza o contador com o número do servidor", () => {
     const e = reduzir(inicial, { tipo: "precheck", uso: { resultado: "passou", obtido: "8.0", numero_uso: 2 } });
     expect(e.prechecks).toEqual({ usados: 2, ultimo: { resultado: "passou", obtido: "8.0", numero_uso: 2 } });
+  });
+  it("verificou sem sucesso acumula; com sucesso encerra, e depois nada muda", () => {
+    const um = reduzir(inicial, { tipo: "verificou", resultado: { resultado: "falhou", passados: 1, total: 3 }, encerrada: false });
+    expect([um.verificacoes.length, um.encerrada]).toEqual([1, null]);
+    const dois = reduzir(um, { tipo: "verificou", resultado: { resultado: "passou", passados: 3, total: 3 }, encerrada: true });
+    expect(dois.encerrada).toEqual({ desfecho: "resolvido" });
+    expect(reduzir(dois, { tipo: "verificou", resultado: { resultado: "falhou", passados: 0, total: 3 }, encerrada: false })).toBe(dois);
   });
   it("editou guarda o código atual", () => {
     expect(reduzir(inicial, { tipo: "editou", codigo: "x" }).codigoAtual).toBe("x");
