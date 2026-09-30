@@ -28,9 +28,12 @@ export type LinhaExercicio = {
   tema_codigo: string; nivel: string;
 };
 
+export type DicaAberta = { nivel: number; texto: string };
+
 export type RespostaTentativa = {
   tentativa: { id: string; numero: number; multiplicador_repeticao: number };
   estado: EstadoTentativa;
+  dicas: DicaAberta[];          // só as já usadas nesta tentativa (RF-12)
   exercicio: {
     assinatura: string; descricao: string; codigo: string;
     teste_exemplo: TesteExemplo;
@@ -40,11 +43,12 @@ export type RespostaTentativa = {
 
 // Lista fechada do que vai ao navegador: nunca suite_oculta, codigo_correto,
 // linha_defeito nem categoria_codigo (RNF-03), mesmo que a linha traga mais campos.
-export function montarResposta(l: LinhaExercicio, estado: EstadoTentativa): RespostaTentativa {
+export function montarResposta(l: LinhaExercicio, estado: EstadoTentativa, dicas: DicaAberta[] = []): RespostaTentativa {
   const nivel = ehNivel(l.nivel) ? l.nivel : "baixo";
   return {
     tentativa: { id: l.tentativa_id, numero: l.numero_tentativa, multiplicador_repeticao: l.numero_tentativa > 1 ? 0.5 : 1 },
     estado,
+    dicas: dicas.map((d) => ({ nivel: d.nivel, texto: d.texto })),
     exercicio: {
       assinatura: l.assinatura,
       descricao: l.descricao,

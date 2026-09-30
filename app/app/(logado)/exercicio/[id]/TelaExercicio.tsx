@@ -6,7 +6,9 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reconstruirEstado } from "@/lib/estado";
 import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
 import { LIMITE_USOS, nomeDaFuncao, obtidoDoResultado, precheckDisponivel, resultadoDoUso } from "@/lib/precheck";
+import { situacaoDasDicas, type NivelDica } from "@/lib/dicas";
 import { reduzir } from "@/lib/maquina-exercicio";
+import { pdrDoEstado } from "@/lib/pdr";
 import type { RespostaTentativa } from "@/lib/tentativa";
 import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
@@ -28,7 +30,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const precheck = usePrecheck();
   const [enviando, setEnviando] = useState(false);   // cobre os dois POSTs e a execução
   const [verificando, setVerificando] = useState(false);
-  const [pdrFinal, setPdrFinal] = useState<number | null>(null);
+  const [textosDicas, setTextosDicas] = useState<Partial<Record<NivelDica, string>>>({});
+  const [pedindoDica, setPedindoDica] = useState<NivelDica | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -43,6 +46,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
         if (!ok) return setErro(corpo?.erro ?? "Não foi possível carregar o exercício.");
         setDados(corpo);
         despachar({ tipo: "carregou", estado: corpo.estado });
+        setTextosDicas(Object.fromEntries((corpo.dicas ?? []).map((d: { nivel: number; texto: string }) => [d.nivel, d.texto])));
       })
       .catch(() => ativo && setErro("Não foi possível carregar o exercício."));
     return () => {
@@ -132,12 +136,25 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       despachar({ tipo: "editou", codigo });
       despachar({ tipo: "verificou", encerrada: r.corpo.encerrada === true,
         resultado: { resultado: r.corpo.resultado, passados: r.corpo.passados, total: r.corpo.total } });
-      if (typeof r.corpo.pdr_final === "number") setPdrFinal(r.corpo.pdr_final);
     } finally {
       setVerificando(false);
     }
   };
   const ultimoVerificar = estado.verificacoes.at(-1);
+
+  // Dica (RF-12): o servidor confere a liberação, grava o evento e devolve o texto.
+  const pedirDica = async (nivel: NivelDica) => {
+    if (pedindoDica !== null) return;
+    setPedindoDica(nivel);
+    try {
+      const r = await postar("/api/dica", { nivel });
+      if (!r.ok) return setAviso({ tipo: "erro", texto: r.corpo?.erro ?? "Não foi possível abrir a dica agora." });
+      setTextosDicas((t) => ({ ...t, [nivel]: r.corpo.texto }));
+      despachar({ tipo: "dica", nivel });
+    } finally {
+      setPedindoDica(null);
+    }
+  };
 
   if (erro) {
     return (
@@ -187,7 +204,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
         )}
 
         {ultimoVerificar && (
-          <ResultadoDoVerificar resultado={ultimoVerificar} numero={estado.verificacoes.length} pdrFinal={pdrFinal} />
+          <ResultadoDoVerificar resultado={ultimoVerificar} numero={estado.verificacoes.length}
+            pdrFinal={encerrada ? pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: tentativa.numero }).pdr : null} />
         )}
 
         <BarraAcoes editorTravado={travado} aoPrecheck={rodarPrecheck} precheck={{
@@ -198,9 +216,9 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       </div>
 
       <aside className="flex flex-col gap-6">
-        <PainelPontuacao exercicio={exercicio} multiplicadorRepeticao={tentativa.multiplicador_repeticao} localizacao={estado.localizacao} />
+        <PainelPontuacao exercicio={exercicio} estado={estado} numeroTentativa={tentativa.numero} />
         {travado && <AvisoLocalizacao />}
-        <PainelDicas editorTravado={travado} />
+        <PainelDicas situacoes={situacaoDasDicas(estado)} textos={textosDicas} pedindo={pedindoDica} aoPedir={pedirDica} />
       </aside>
     </main>
   );

@@ -19,3 +19,22 @@ Supabase ou do modelo de linguagem fica neste projeto.
 python -m unittest discover -s tests -t .   # testes
 python servidor_local.py                    # desenvolvimento: http://127.0.0.1:3071/api/executar
 ```
+
+## Teste de isolamento (S4-07)
+
+`tests/isolamento_remoto.py` submete ao executor publicado códigos que tentam ler o
+ambiente, escrever arquivos, esgotar a memória, travar em laço e deixar processos
+vivos. As sondas devolvem só contagens e sim/não; nenhum valor de variável é lido.
+
+```bash
+python executor/tests/isolamento_remoto.py https://bughunter-executor.vercel.app/api/executar
+```
+
+O segredo vem de `EXECUTOR_SEGREDO` no ambiente. Contra o servidor local no Windows,
+use `--sem-memoria`; lá os limites do sistema operacional não existem.
+
+Limitações conhecidas (vão para o README do projeto na S6-05):
+- o processo do aluno consegue abrir o ambiente do processo pai, que neste projeto só
+  tem `EXECUTOR_SEGREDO`: com ele, dá para chamar o próprio executor, que não guarda nada;
+- `/tmp` é da instância: execuções simultâneas na mesma instância poderiam ver os
+  arquivos temporários umas das outras enquanto existem (frações de segundo).
