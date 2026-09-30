@@ -38,4 +38,10 @@ describe("montarResposta (D-20, RNF-03)", () => {
     expect(montarResposta(linha, vazio).tentativa.multiplicador_repeticao).toBe(1);
     expect(montarResposta({ ...linha, numero_tentativa: 2 }, vazio).tentativa.multiplicador_repeticao).toBe(0.5);
   });
+  it("dicas: só nível e texto das já usadas, sem a categoria (RF-12, RNF-03)", () => {
+    const dicas = [{ nivel: 1, texto: "natureza do defeito", categoria_codigo: "ARIT_TROC" }];
+    const r = montarResposta(linha, vazio, dicas);
+    expect(r.dicas).toEqual([{ nivel: 1, texto: "natureza do defeito" }]);
+    expect(JSON.stringify(r)).not.toContain("ARIT_TROC");
+  });
 });

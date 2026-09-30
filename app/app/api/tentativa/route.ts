@@ -5,7 +5,7 @@
 import { reconstruirEstado, type Evento } from "@/lib/estado";
 import { usuarioAtual } from "@/lib/sessao";
 import { criarClienteServico } from "@/lib/supabase/servico";
-import { lerPedido, montarResposta, type LinhaExercicio } from "@/lib/tentativa";
+import { lerPedido, montarResposta, type DicaAberta, type LinhaExercicio } from "@/lib/tentativa";
 
 const erro = (status: number, mensagem: string) => Response.json({ erro: mensagem }, { status });
 
@@ -38,6 +38,10 @@ export async function POST(request: Request) {
   const { data: eventos, error: erroEventos } = await banco
     .from("eventos").select("tipo, payload").eq("tentativa_id", tentativaId).order("em").order("id");
   if (erroEventos) return erro(500, "Não foi possível carregar o exercício agora.");
+  // textos das dicas já abertas, para mostrá-las de novo (RF-12)
+  const { data: dicas, error: erroDicas } = await banco.rpc("dicas_da_tentativa", { p_usuario: usuario.id, p_tentativa: tentativaId });
+  if (erroDicas) return erro(500, "Não foi possível carregar o exercício agora.");
 
-  return Response.json(montarResposta(linha, reconstruirEstado(eventos as Evento[])), { headers: { "cache-control": "no-store" } });
+  return Response.json(montarResposta(linha, reconstruirEstado(eventos as Evento[]), (dicas as DicaAberta[] | null) ?? []),
+    { headers: { "cache-control": "no-store" } });
 }
