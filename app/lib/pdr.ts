@@ -7,7 +7,7 @@
 // A conta é feita em inteiros (fatores em centésimos), para que o empate 42,5 → 43
 // (D-16, meio-para-cima) não dependa de erro de ponto flutuante.
 
-import { estadoLocalizacao, FATOR_LOCALIZACAO, type Evento, type TentativaLocalizacao } from "./estado";
+import { estadoLocalizacao, FATOR_LOCALIZACAO, type EstadoTentativa, type Evento, type TentativaLocalizacao } from "./estado";
 
 export const PESO_LOCALIZACAO = 0.4;
 export const PESO_REPARO = 0.6;
@@ -63,4 +63,18 @@ export function pdrDosComponentes(c: ComponentesPdr): number {
 
 export function calcularPdr(eventos: Evento[], opcoes: { base: number; numero_tentativa: number }): number {
   return pdrDosComponentes(componentesPdr(eventos, opcoes));
+}
+
+// Painel ao vivo (S4-04, RF-14): a mesma conta, sobre o estado da tentativa.
+// Aberta: o máximo ainda possível, supondo que o próximo passo dê certo
+// (acertar a linha, se a localização não terminou; passar no próximo Verificar).
+// Encerrada: o PDR final, igual ao que o servidor gravou.
+export function pdrDoEstado(estado: EstadoTentativa, opcoes: { base: number; numero_tentativa: number }) {
+  const eventos: Evento[] = estado.localizacao.tentativas.map((t) => ({ tipo: "localizou", payload: { ...t } }));
+  if (!estado.localizacao.concluida && !estado.encerrada) eventos.push({ tipo: "localizou", payload: { correta: true } });
+  for (const v of estado.verificacoes) eventos.push({ tipo: "verificar", payload: { ...v } });
+  for (const nivel of estado.dicasUsadas) eventos.push({ tipo: "dica", payload: { nivel } });
+  if (estado.encerrada) eventos.push({ tipo: "encerrou", payload: { ...estado.encerrada } });
+  const componentes = componentesPdr(eventos, opcoes);
+  return { componentes, pdr: pdrDosComponentes(componentes), final: estado.encerrada !== null };
 }

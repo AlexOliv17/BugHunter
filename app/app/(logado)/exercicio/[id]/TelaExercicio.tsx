@@ -7,6 +7,7 @@ import { reconstruirEstado } from "@/lib/estado";
 import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
 import { LIMITE_USOS, nomeDaFuncao, obtidoDoResultado, precheckDisponivel, resultadoDoUso } from "@/lib/precheck";
 import { reduzir } from "@/lib/maquina-exercicio";
+import { pdrDoEstado } from "@/lib/pdr";
 import type { RespostaTentativa } from "@/lib/tentativa";
 import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
@@ -28,7 +29,6 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const precheck = usePrecheck();
   const [enviando, setEnviando] = useState(false);   // cobre os dois POSTs e a execução
   const [verificando, setVerificando] = useState(false);
-  const [pdrFinal, setPdrFinal] = useState<number | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -132,7 +132,6 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       despachar({ tipo: "editou", codigo });
       despachar({ tipo: "verificou", encerrada: r.corpo.encerrada === true,
         resultado: { resultado: r.corpo.resultado, passados: r.corpo.passados, total: r.corpo.total } });
-      if (typeof r.corpo.pdr_final === "number") setPdrFinal(r.corpo.pdr_final);
     } finally {
       setVerificando(false);
     }
@@ -187,7 +186,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
         )}
 
         {ultimoVerificar && (
-          <ResultadoDoVerificar resultado={ultimoVerificar} numero={estado.verificacoes.length} pdrFinal={pdrFinal} />
+          <ResultadoDoVerificar resultado={ultimoVerificar} numero={estado.verificacoes.length}
+            pdrFinal={encerrada ? pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: tentativa.numero }).pdr : null} />
         )}
 
         <BarraAcoes editorTravado={travado} aoPrecheck={rodarPrecheck} precheck={{
@@ -198,7 +198,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       </div>
 
       <aside className="flex flex-col gap-6">
-        <PainelPontuacao exercicio={exercicio} multiplicadorRepeticao={tentativa.multiplicador_repeticao} localizacao={estado.localizacao} />
+        <PainelPontuacao exercicio={exercicio} estado={estado} numeroTentativa={tentativa.numero} />
         {travado && <AvisoLocalizacao />}
         <PainelDicas editorTravado={travado} />
       </aside>

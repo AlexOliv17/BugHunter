@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { calcularPdr, componentesPdr } from "../pdr";
+import { reconstruirEstado } from "../estado";
+import { calcularPdr, componentesPdr, pdrDoEstado } from "../pdr";
 
 type E = { tipo: string; payload: Record<string, unknown> };
 const loc = (linha: number, correta: boolean): E => ({ tipo: "localizou", payload: { linha, correta } });
@@ -99,5 +100,24 @@ describe("calcularPdr (RN-05)", () => {
               const num = base * (40 * l + 60 * rep) * md * mr, den = 10 ** 8;
               expect(calcularPdr(eventos, { base, numero_tentativa: n })).toBe(Math.floor((2 * num + den) / (2 * den)));
             }
+  });
+});
+
+describe("pdrDoEstado: painel ao vivo (S4-04)", () => {
+  const estado = (eventos: E[]) => reconstruirEstado(eventos);
+  it("início: o máximo possível, a base cheia", () => {
+    expect(pdrDoEstado(estado([]), MEDIO)).toMatchObject({ pdr: 200, final: false });
+  });
+  it("um erro de linha: o máximo passa a ser o da 2ª tentativa", () => {
+    expect(pdrDoEstado(estado([loc(1, false)]), MEDIO).pdr).toBe(168);   // 200 × (0,24 + 0,6)
+  });
+  it("acompanha Verificar falho e dica, como o cálculo do servidor", () => {
+    const eventos = [loc(6, false), loc(4, true), dica(1), ver("falhou")];
+    expect(pdrDoEstado(estado(eventos), MEDIO).pdr).toBe(calcularPdr([...eventos, ver("passou")], MEDIO));
+    expect(pdrDoEstado(estado(eventos), MEDIO).pdr).toBe(117);
+  });
+  it("encerrada: o PDR final, igual ao gravado", () => {
+    const eventos = [loc(4, true), ver("falhou"), ver("passou"), { tipo: "encerrou", payload: { desfecho: "resolvido" } }];
+    expect(pdrDoEstado(estado(eventos), BAIXO)).toMatchObject({ pdr: 85, final: true });
   });
 });

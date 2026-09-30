@@ -26,6 +26,7 @@ export type EstadoTentativa = {
   prechecks: { usados: number; ultimo: UsoPrecheck | null };
   codigoAtual: string | null;    // último código registrado (evento editou), ou null
   verificacoes: ResultadoVerificacao[];   // RF-10, na ordem
+  dicasUsadas: number[];                  // níveis dos eventos dica (RN-04)
   encerrada: { desfecho: string } | null; // evento encerrou (RF-10, RF-13)
 };
 
@@ -47,6 +48,7 @@ export function reconstruirEstado(eventos: Evento[]): EstadoTentativa {
   let ultimo: UsoPrecheck | null = null;
   let codigoAtual: string | null = null;
   const verificacoes: ResultadoVerificacao[] = [];
+  const dicasUsadas: number[] = [];
   let encerrada: EstadoTentativa["encerrada"] = null;
   for (const e of eventos) {
     if (e.tipo === "localizou" && tentativas.length < 2 && !tentativas.some((t) => t.correta)) {
@@ -62,10 +64,12 @@ export function reconstruirEstado(eventos: Evento[]): EstadoTentativa {
       codigoAtual = e.payload.codigo;
     } else if (e.tipo === "verificar") {
       verificacoes.push({ resultado: String(e.payload.resultado), passados: Number(e.payload.passados), total: Number(e.payload.total) });
+    } else if (e.tipo === "dica") {
+      dicasUsadas.push(Number(e.payload.nivel));
     } else if (e.tipo === "encerrou") {
       encerrada = { desfecho: String(e.payload.desfecho) };
     }
   }
   const localizacao = estadoLocalizacao(tentativas);
-  return { localizacao, editorLiberado: localizacao.concluida, prechecks: { usados, ultimo }, codigoAtual, verificacoes, encerrada };
+  return { localizacao, editorLiberado: localizacao.concluida, prechecks: { usados, ultimo }, codigoAtual, verificacoes, dicasUsadas, encerrada };
 }

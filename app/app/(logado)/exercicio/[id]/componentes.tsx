@@ -3,7 +3,8 @@
 
 import Link from "next/link";
 
-import type { EstadoLocalizacao, ResultadoVerificacao } from "@/lib/estado";
+import type { EstadoTentativa, ResultadoVerificacao } from "@/lib/estado";
+import { PESO_LOCALIZACAO, PESO_REPARO, pdrDoEstado } from "@/lib/pdr";
 import type { ResultadoPrecheck } from "@/lib/precheck";
 import type { RespostaTentativa } from "@/lib/tentativa";
 
@@ -58,38 +59,47 @@ export function TesteExemplo({ exercicio }: { exercicio: Exercicio }) {
   );
 }
 
-const EFEITO_LOCALIZACAO: Record<string, [string, string, string]> = {
-  "1": ["Localização na 1ª", "cheio", "text-sucesso"],
-  "0.6": ["Localização na 2ª", "−16%", "text-perigo"],
-  "0.3": ["Localização não acertada", "−28%", "text-perigo"],
-};
+const pct = (x: number) => `−${Math.round(x * 100)}%`;
 
-export function PainelPontuacao({ exercicio, multiplicadorRepeticao, localizacao }: {
-  exercicio: Exercicio; multiplicadorRepeticao: number; localizacao?: EstadoLocalizacao;
+// Painel de pontuação ao vivo (S4-04, RF-14): o mesmo cálculo do servidor (RN-05),
+// com o efeito de cada componente. Localização e reparo pesam sobre a base (40% e
+// 60%); dica e repetição multiplicam o resultado.
+export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
+  exercicio: Exercicio; estado: EstadoTentativa; numeroTentativa: number;
 }) {
-  // O cálculo completo do PDR ao vivo, com reparo e dica, é a S4-03 e a S4-04 (RF-14).
-  // Aqui só o efeito da localização (40% × fator, RN-05) e da repetição.
-  const fator = localizacao?.fator ?? 1;
-  const emJogo = Math.round(exercicio.base * (0.4 * fator + 0.6) * multiplicadorRepeticao);
-  const efeito = localizacao?.fator != null ? EFEITO_LOCALIZACAO[String(localizacao.fator)] : null;
+  const { componentes: c, pdr, final } = pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: numeroTentativa });
+  const loc = estado.localizacao;
+  const falhas = estado.verificacoes.filter((v) => v.resultado !== "passou").length;
+  const maiorDica = estado.dicasUsadas.length ? Math.max(...estado.dicasUsadas) : 0;
+
+  const linhas: { rotulo: string; valor: string; tom: "ok" | "perda" | "neutro" }[] = [];
+  if (loc.concluida) {
+    const perda = PESO_LOCALIZACAO * (1 - c.fatorLocalizacao);
+    const rotulo = loc.tentativas[0]?.correta ? "Localização na 1ª" : loc.acertou ? "Localização na 2ª" : "Localização não acertada";
+    linhas.push({ rotulo, valor: perda ? pct(perda) : "cheio", tom: perda ? "perda" : "ok" });
+  } else if (!estado.encerrada) {
+    linhas.push({ rotulo: loc.tentativas.length ? "Localização: última tentativa" : "Localização em andamento", valor: "—", tom: "neutro" });
+  }
+  if (falhas) linhas.push({ rotulo: `Verificar sem sucesso × ${falhas}`, valor: pct(PESO_REPARO * (1 - c.fatorReparo)), tom: "perda" });
+  if (maiorDica) linhas.push({ rotulo: `Dica ${maiorDica} usada`, valor: pct(1 - c.multiplicadorDica), tom: "perda" });
+  if (c.multiplicadorRepeticao < 1) linhas.push({ rotulo: "Repetição do exercício", valor: pct(1 - c.multiplicadorRepeticao), tom: "perda" });
+
+  const cor = { ok: "text-sucesso", perda: "text-perigo", neutro: "text-texto-apagado" };
   return (
     <section aria-label="Pontuação" className="rounded border border-borda bg-painel p-8">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-xs font-semibold tracking-wider text-texto-secundario">PDR EM JOGO</h2>
-        <span className="text-5xl font-semibold text-destaque">{emJogo}</span>
+        <h2 className="text-xs font-semibold tracking-wider text-texto-secundario">{final ? "PDR FINAL" : "PDR EM JOGO"}</h2>
+        <span aria-live="polite" className={`text-5xl font-semibold ${final ? "text-sucesso" : "text-destaque"}`}>{pdr}</span>
       </div>
       <dl className="mt-6 flex flex-col gap-2 text-sm">
         <div className="flex justify-between"><dt className="text-texto-secundario">Base — {nomeNivel(exercicio.nivel).toLowerCase()}</dt><dd className="font-mono">{exercicio.base}</dd></div>
-        {multiplicadorRepeticao < 1 && (
-          <div className="flex justify-between"><dt className="text-texto-secundario">Repetição do exercício</dt><dd className="font-mono text-perigo">−50%</dd></div>
-        )}
-        {efeito && (
-          <div className="flex justify-between"><dt className="text-texto-secundario">{efeito[0]}</dt><dd className={`font-mono ${efeito[2]}`}>{efeito[1]}</dd></div>
-        )}
-        {multiplicadorRepeticao === 1 && !efeito && (
-          <div className="flex justify-between"><dt className="text-texto-apagado">Nenhuma penalidade ainda</dt><dd className="text-texto-apagado">—</dd></div>
-        )}
+        {linhas.map((l) => (
+          <div key={l.rotulo} className="flex justify-between gap-4">
+            <dt className="text-texto-secundario">{l.rotulo}</dt><dd className={`font-mono ${cor[l.tom]}`}>{l.valor}</dd>
+          </div>
+        ))}
       </dl>
+      {!final && <p className="mt-5 text-xs leading-5 text-texto-apagado">O máximo que ainda dá para fazer, se o próximo passo der certo.</p>}
     </section>
   );
 }
@@ -153,19 +163,19 @@ export function BarraAcoes({ editorTravado, precheck, aoPrecheck, verificar, aoV
   // O contador mostra os usos consumidos: 3/3 quando esgota (RF-09).
   const rotulo = precheck.executando ? "Rodando…" : precheck.preparando && precheck.disponivel ? "Preparando o ambiente…" : "Precheck";
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-wrap items-center gap-4">
       <button type="button" onClick={aoPrecheck} disabled={!precheck.disponivel || precheck.executando}
         aria-describedby="precheck-contador"
-        className="h-14 rounded border border-borda px-8 font-semibold transition-colors enabled:text-texto enabled:hover:border-texto-apagado disabled:text-texto-apagado">
+        className="h-14 whitespace-nowrap rounded border border-borda px-8 font-semibold transition-colors enabled:text-texto enabled:hover:border-texto-apagado disabled:text-texto-apagado">
         {rotulo} <span id="precheck-contador" className="font-mono text-sm font-normal text-texto-secundario">{precheck.usados}/{precheck.limite}</span>
       </button>
       <button type="button" onClick={aoVerificar} disabled={!verificar.disponivel || verificar.executando}
-        className="h-14 rounded border border-destaque bg-destaque px-8 font-semibold text-sobre-destaque transition-opacity enabled:hover:opacity-90 disabled:border-borda disabled:bg-transparent disabled:text-texto-apagado">
+        className="h-14 whitespace-nowrap rounded border border-destaque bg-destaque px-8 font-semibold text-sobre-destaque transition-opacity enabled:hover:opacity-90 disabled:border-borda disabled:bg-transparent disabled:text-texto-apagado">
         {verificar.executando ? "Verificando…" : "Verificar"}
       </button>
       {editorTravado && <span className="text-sm text-texto-apagado">Disponíveis após você apontar a linha</span>}
       {!editorTravado && precheck.usados >= precheck.limite && <span className="text-sm text-texto-apagado">Os 3 Prechecks desta tentativa foram usados</span>}
-      <button type="button" disabled className="ml-auto h-14 rounded border border-borda px-6 font-semibold text-perigo/60">
+      <button type="button" disabled title="Disponível em breve" className="ml-auto h-14 whitespace-nowrap rounded border border-borda px-6 font-semibold text-texto-apagado">
         Desistir e ver o feedback
       </button>
     </div>
