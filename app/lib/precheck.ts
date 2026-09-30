@@ -18,3 +18,23 @@ export const precheckDisponivel = (usados: number, editorLiberado: boolean) => e
 export function nomeDaFuncao(assinatura: string): string {
   return assinatura.slice(0, assinatura.indexOf("(")).trim();
 }
+
+// O que é gravado no evento precheck (S3-07): em erro, a mensagem vai no campo obtido.
+export function obtidoDoResultado(r: ResultadoPrecheck): string | null {
+  if (r.resultado === "passou" || r.resultado === "falhou") return r.obtido;
+  if (r.resultado === "erro") return r.erro;
+  return null;
+}
+
+// Caminho inverso, para mostrar o último Precheck ao retomar a tentativa (RN-10).
+export function resultadoDoUso(uso: { resultado: string; obtido: string | null }): ResultadoPrecheck {
+  switch (uso.resultado) {
+    case "passou":
+    case "falhou":
+      return { resultado: uso.resultado, obtido: uso.obtido ?? "" };
+    case "erro":
+      return { resultado: "erro", erro: uso.obtido ?? "" };
+    default:
+      return { resultado: "tempo_excedido" };
+  }
+}

@@ -16,9 +16,13 @@ export type EstadoLocalizacao = {
   fator: number | null;          // null enquanto não concluída
 };
 
+export type UsoPrecheck = { resultado: string; obtido: string | null; numero_uso: number };
+
 export type EstadoTentativa = {
   localizacao: EstadoLocalizacao;
   editorLiberado: boolean;
+  prechecks: { usados: number; ultimo: UsoPrecheck | null };
+  codigoAtual: string | null;    // último código registrado (evento editou), ou null
 };
 
 export function estadoLocalizacao(tentativas: TentativaLocalizacao[]): EstadoLocalizacao {
@@ -35,11 +39,23 @@ export function estadoLocalizacao(tentativas: TentativaLocalizacao[]): EstadoLoc
 
 export function reconstruirEstado(eventos: Evento[]): EstadoTentativa {
   const tentativas: TentativaLocalizacao[] = [];
+  let usados = 0;
+  let ultimo: UsoPrecheck | null = null;
+  let codigoAtual: string | null = null;
   for (const e of eventos) {
     if (e.tipo === "localizou" && tentativas.length < 2 && !tentativas.some((t) => t.correta)) {
       tentativas.push({ linha: Number(e.payload.linha), correta: e.payload.correta === true });
+    } else if (e.tipo === "precheck") {
+      usados += 1;
+      ultimo = {
+        resultado: String(e.payload.resultado),
+        obtido: typeof e.payload.obtido === "string" ? e.payload.obtido : null,
+        numero_uso: Number(e.payload.numero_uso),
+      };
+    } else if (e.tipo === "editou" && typeof e.payload.codigo === "string") {
+      codigoAtual = e.payload.codigo;
     }
   }
   const localizacao = estadoLocalizacao(tentativas);
-  return { localizacao, editorLiberado: localizacao.concluida };
+  return { localizacao, editorLiberado: localizacao.concluida, prechecks: { usados, ultimo }, codigoAtual };
 }

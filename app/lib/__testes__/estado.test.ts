@@ -34,6 +34,23 @@ describe("reconstruirEstado (RN-10, RF-17)", () => {
   });
 });
 
+describe("reconstruirEstado: edições e prechecks (S3-07)", () => {
+  it("conta os prechecks e guarda o último", () => {
+    const e = reconstruirEstado([loc(4, true, 1),
+      { tipo: "precheck", payload: { resultado: "falhou", obtido: "3", numero_uso: 1 } },
+      { tipo: "precheck", payload: { resultado: "tempo_excedido", obtido: null, numero_uso: 2 } }]);
+    expect(e.prechecks).toEqual({ usados: 2, ultimo: { resultado: "tempo_excedido", obtido: null, numero_uso: 2 } });
+  });
+  it("o código atual é o do último editou", () => {
+    const e = reconstruirEstado([loc(4, true, 1), { tipo: "editou", payload: { codigo: "a", linhas_alteradas: 1 } },
+      { tipo: "editou", payload: { codigo: "b", linhas_alteradas: 1 } }]);
+    expect(e.codigoAtual).toBe("b");
+  });
+  it("sem editou, o código atual é null (vale o recebido)", () => {
+    expect(reconstruirEstado([]).codigoAtual).toBeNull();
+  });
+});
+
 describe("máquina de estados do editor (S3-04)", () => {
   const inicial = reconstruirEstado([]);
   it("acerto na 1ª destrava", () => {
@@ -53,5 +70,12 @@ describe("máquina de estados do editor (S3-04)", () => {
   it("carregar substitui o estado pelo reconstruído no servidor", () => {
     const servidor = reconstruirEstado([loc(6, false, 1), loc(4, true, 2)]);
     expect(reduzir(inicial, { tipo: "carregou", estado: servidor })).toEqual(servidor);
+  });
+  it("precheck registrado atualiza o contador com o número do servidor", () => {
+    const e = reduzir(inicial, { tipo: "precheck", uso: { resultado: "passou", obtido: "8.0", numero_uso: 2 } });
+    expect(e.prechecks).toEqual({ usados: 2, ultimo: { resultado: "passou", obtido: "8.0", numero_uso: 2 } });
+  });
+  it("editou guarda o código atual", () => {
+    expect(reduzir(inicial, { tipo: "editou", codigo: "x" }).codigoAtual).toBe("x");
   });
 });

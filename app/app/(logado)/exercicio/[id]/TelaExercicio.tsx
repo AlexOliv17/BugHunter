@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { reconstruirEstado } from "@/lib/estado";
 import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
-import { LIMITE_USOS, nomeDaFuncao, precheckDisponivel, type ResultadoPrecheck } from "@/lib/precheck";
+import { LIMITE_USOS, nomeDaFuncao, obtidoDoResultado, precheckDisponivel, resultadoDoUso } from "@/lib/precheck";
 import { reduzir } from "@/lib/maquina-exercicio";
 import type { RespostaTentativa } from "@/lib/tentativa";
 import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, TesteExemplo } from "./componentes";
@@ -23,10 +23,10 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [erro, setErro] = useState<string | null>(null);
   const [estado, despachar] = useReducer(reduzir, reconstruirEstado([]));
   const [aviso, setAviso] = useState<Aviso | null>(null);
-  const [codigoAtual, setCodigoAtual] = useState<string | null>(null);
+  // rascunho: o que está no editor agora; estado.codigoAtual: o último código registrado
+  const [rascunho, setRascunho] = useState<string | null>(null);
   const precheck = usePrecheck();
-  const [usosPrecheck, setUsosPrecheck] = useState(0);
-  const [ultimoPrecheck, setUltimoPrecheck] = useState<{ resultado: ResultadoPrecheck; uso: number } | null>(null);
+  const [enviando, setEnviando] = useState(false);   // cobre os dois POSTs e a execução
 
   useEffect(() => {
     let ativo = true;
@@ -71,21 +71,49 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
     () => (travado ? modoLocalizacao({ aoApontar: apontar, linhasErradas, ativo: true }) : marcasDeEdicao(original)),
     [apontar, linhasErradas, travado, original],
   );
+  const codigoNoEditor = rascunho ?? estado.codigoAtual ?? original;
   // RN-08: linhas alteradas em relação ao código recebido; informativo (D-02)
-  const alteradas = useMemo(() => contarLinhasAlteradas(original, codigoAtual ?? original), [original, codigoAtual]);
+  const alteradas = useMemo(() => contarLinhasAlteradas(original, codigoNoEditor), [original, codigoNoEditor]);
+  const usados = estado.prechecks.usados;
+
+  const postar = async (rota: string, corpo: Record<string, unknown>) => {
+    const r = await fetch(rota, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ tentativa_id: tentativaId, ...corpo }),
+    }).catch(() => null);
+    return { ok: !!r?.ok, corpo: await r?.json().catch(() => null) };
+  };
 
   // Precheck (RF-09): só o teste de exemplo, no navegador; não altera a pontuação.
+  // O código é registrado antes (evento editou, RN-12) e o uso depois; o número do
+  // uso vem do servidor, que recusa o quarto (RN-02).
   const rodarPrecheck = async () => {
-    if (!dados || !precheckDisponivel(usosPrecheck, estado.editorLiberado)) return;
-    if (precheck.ambiente !== "pronto") return;   // ainda carregando: não consome uso (decisão 1.7)
-    const uso = usosPrecheck + 1;
-    setUsosPrecheck(uso);                           // conta também o que estourar o tempo (D-10)
+    if (!dados || !precheckDisponivel(usados, estado.editorLiberado)) return;
+    if (enviando || precheck.ambiente !== "pronto") return;   // ainda carregando: não consome uso (decisão 1.7)
+    setEnviando(true);
+    try {
+      await registrarEExecutar(dados, codigoNoEditor);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const registrarEExecutar = async (dados: RespostaTentativa, codigo: string) => {
+    const edicao = await postar("/api/editou", { codigo });
+    if (!edicao.ok) return setAviso({ tipo: "erro", texto: edicao.corpo?.erro ?? "Não foi possível registrar o código agora." });
+    despachar({ tipo: "editou", codigo });
+
     const t = dados.exercicio.teste_exemplo;
     const resultado = await precheck.executar({
-      codigo: codigoAtual ?? dados.exercicio.codigo, funcao: nomeDaFuncao(dados.exercicio.assinatura),
-      entrada: t.entrada, esperado: t.esperado,
+      codigo, funcao: nomeDaFuncao(dados.exercicio.assinatura), entrada: t.entrada, esperado: t.esperado,
     });
-    setUltimoPrecheck({ resultado, uso });
+    // conta também o que estourou o tempo (D-10)
+    const obtido = obtidoDoResultado(resultado);
+    const registro = await postar("/api/precheck", { resultado: resultado.resultado, obtido });
+    if (!registro.ok) return setAviso({ tipo: "erro", texto: registro.corpo?.erro ?? "Não foi possível registrar o Precheck agora." });
+    setAviso(null);
+    despachar({ tipo: "precheck", uso: { resultado: resultado.resultado, obtido, numero_uso: registro.corpo.numero_uso } });
   };
 
   if (erro) {
@@ -122,7 +150,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
               </span>
             )}
           </header>
-          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={travado} extensoes={extensoes} aoMudar={setCodigoAtual}
+          <EditorCodigo codigo={estado.codigoAtual ?? exercicio.codigo} somenteLeitura={travado} extensoes={extensoes} aoMudar={setRascunho}
             rotulo={travado ? "Código do exercício. Clique na linha onde está o defeito." : "Código do exercício, editável."} />
           {aviso && (
             <p role="status" className={`border-t border-borda px-6 py-3 text-sm ${aviso.tipo === "certo" ? "text-sucesso" : aviso.tipo === "errado" ? "text-perigo" : "text-texto-secundario"}`}>
@@ -131,14 +159,14 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
           )}
         </section>
 
-        {ultimoPrecheck && (
-          <ResultadoDoPrecheck resultado={ultimoPrecheck.resultado} uso={ultimoPrecheck.uso} limite={LIMITE_USOS} exercicio={exercicio} />
+        {estado.prechecks.ultimo && (
+          <ResultadoDoPrecheck resultado={resultadoDoUso(estado.prechecks.ultimo)} uso={estado.prechecks.ultimo.numero_uso} limite={LIMITE_USOS} exercicio={exercicio} />
         )}
 
         <BarraAcoes editorTravado={travado} aoPrecheck={rodarPrecheck} precheck={{
-          usados: usosPrecheck, limite: LIMITE_USOS,
-          disponivel: precheckDisponivel(usosPrecheck, estado.editorLiberado),
-          preparando: precheck.ambiente === "carregando", executando: precheck.ambiente === "executando",
+          usados, limite: LIMITE_USOS,
+          disponivel: precheckDisponivel(usados, estado.editorLiberado),
+          preparando: precheck.ambiente === "carregando", executando: enviando || precheck.ambiente === "executando",
         }} />
       </div>
 
