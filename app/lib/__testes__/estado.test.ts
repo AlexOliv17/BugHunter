@@ -96,6 +96,10 @@ describe("máquina de estados do editor (S3-04)", () => {
     expect(dois.encerrada).toEqual({ desfecho: "resolvido" });
     expect(reduzir(dois, { tipo: "verificou", resultado: { resultado: "falhou", passados: 0, total: 3 }, encerrada: false })).toBe(dois);
   });
+  it("dica registrada entra uma vez só", () => {
+    const e = reduzir(reduzir(inicial, { tipo: "dica", nivel: 1 }), { tipo: "dica", nivel: 1 });
+    expect(e.dicasUsadas).toEqual([1]);
+  });
   it("editou guarda o código atual", () => {
     expect(reduzir(inicial, { tipo: "editou", codigo: "x" }).codigoAtual).toBe("x");
   });

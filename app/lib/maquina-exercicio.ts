@@ -9,7 +9,8 @@ export type Acao =
   | { tipo: "localizou"; linha: number; correta: boolean }
   | { tipo: "editou"; codigo: string }
   | { tipo: "precheck"; uso: UsoPrecheck }
-  | { tipo: "verificou"; resultado: ResultadoVerificacao; encerrada: boolean };
+  | { tipo: "verificou"; resultado: ResultadoVerificacao; encerrada: boolean }
+  | { tipo: "dica"; nivel: number };
 
 export function reduzir(estado: EstadoTentativa, acao: Acao): EstadoTentativa {
   switch (acao.tipo) {
@@ -26,6 +27,10 @@ export function reduzir(estado: EstadoTentativa, acao: Acao): EstadoTentativa {
     case "precheck":
       // o número do uso vem do servidor, que recusa o quarto (RN-02)
       return { ...estado, prechecks: { usados: acao.uso.numero_uso, ultimo: acao.uso } };
+    case "dica":
+      // o servidor já verificou a liberação e gravou o evento (RN-04)
+      if (estado.dicasUsadas.includes(acao.nivel)) return estado;
+      return { ...estado, dicasUsadas: [...estado.dicasUsadas, acao.nivel] };
     case "verificou":
       // resultado e encerramento vêm do servidor, que é quem roda e compara (RN-03)
       if (estado.encerrada) return estado;

@@ -4,6 +4,7 @@
 import Link from "next/link";
 
 import type { EstadoTentativa, ResultadoVerificacao } from "@/lib/estado";
+import { CUSTO_DICA, NIVEIS_DICA, TITULO_DICA, type NivelDica, type SituacaoDica } from "@/lib/dicas";
 import { PESO_LOCALIZACAO, PESO_REPARO, pdrDoEstado } from "@/lib/pdr";
 import type { ResultadoPrecheck } from "@/lib/precheck";
 import type { RespostaTentativa } from "@/lib/tentativa";
@@ -122,31 +123,54 @@ export function AvisoLocalizacao() {
   );
 }
 
-const DICAS = [
-  { nivel: 1, titulo: "Categoria do defeito", custo: "−15%" },
-  { nivel: 2, titulo: "Região do código", custo: "−35%" },
-  { nivel: 3, titulo: "Quase entrega", custo: "−60%" },
-];
-
-export function PainelDicas({ editorTravado }: { editorTravado: boolean }) {
-  // Estados completos (disponível, usada com texto) e o pedido ao servidor: S4-05 e S4-06 (RF-12).
+// Dicas (S4-06, RF-12): travada com o motivo, disponível com o custo à vista antes
+// de pedir, usada com o texto. Quem decide a liberação é o servidor (RN-04).
+export function PainelDicas({ situacoes, textos, pedindo, aoPedir }: {
+  situacoes: Record<NivelDica, SituacaoDica>; textos: Partial<Record<NivelDica, string>>;
+  pedindo: NivelDica | null; aoPedir: (nivel: NivelDica) => void;
+}) {
+  const usadas = NIVEIS_DICA.filter((n) => situacoes[n].situacao === "usada").length;
   return (
     <section aria-label="Dicas" className="rounded border border-borda bg-painel p-8">
       <div className="flex justify-between">
         <h2 className="text-xs font-semibold tracking-wider text-texto-secundario">DICAS</h2>
-        <span className="text-sm text-texto-secundario">0 de 3 usadas</span>
+        <span className="text-sm text-texto-secundario">{usadas} de 3 usadas</span>
       </div>
-      <ul className="mt-5 flex flex-col gap-3 text-sm">
-        {DICAS.map((d) => (
-          <li key={d.nivel} className="flex justify-between text-texto-apagado">
-            <span>{d.nivel} · {d.titulo}</span>
-            <span className="font-mono">{d.custo} · travada</span>
-          </li>
-        ))}
+      <ul className="mt-5 flex flex-col gap-4 text-sm">
+        {NIVEIS_DICA.map((n) => {
+          const s = situacoes[n];
+          const titulo = `${n} · ${TITULO_DICA[n]}`;
+          if (s.situacao === "usada") {
+            return (
+              <li key={n} className="rounded border border-destaque/40 bg-destaque/5 p-4">
+                <div className="flex justify-between">
+                  <span className="font-medium text-destaque">{titulo}</span>
+                  <span className="font-mono text-texto-secundario">{CUSTO_DICA[n]} · usada</span>
+                </div>
+                <p className="mt-2 leading-6">{textos[n] ?? "Carregando o texto…"}</p>
+              </li>
+            );
+          }
+          if (s.situacao === "disponivel") {
+            return (
+              <li key={n}>
+                <button type="button" onClick={() => aoPedir(n)} disabled={pedindo !== null}
+                  className="flex w-full justify-between rounded border border-destaque px-4 py-3 text-left transition-colors enabled:hover:bg-destaque/10 disabled:opacity-60">
+                  <span className="font-medium">{pedindo === n ? "Abrindo…" : `Abrir dica ${titulo}`}</span>
+                  <span className="shrink-0 whitespace-nowrap font-mono text-perigo">{CUSTO_DICA[n]} no PDR</span>
+                </button>
+              </li>
+            );
+          }
+          return (
+            <li key={n} className="text-texto-apagado">
+              <div className="flex justify-between"><span>{titulo}</span><span className="font-mono">{CUSTO_DICA[n]} · travada</span></div>
+              <p className="mt-1 text-xs">{s.motivo}</p>
+            </li>
+          );
+        })}
       </ul>
-      <p className="mt-5 text-sm text-texto-secundario">
-        {editorTravado ? "As dicas abrem depois que você apontar a linha." : "As dicas 2 e 3 abrem depois de um Verificar falho."}
-      </p>
+      <p className="mt-5 text-xs leading-5 text-texto-apagado">O custo não soma: vale o da dica de maior nível que você abrir.</p>
     </section>
   );
 }

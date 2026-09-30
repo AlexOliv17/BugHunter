@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { reconstruirEstado } from "@/lib/estado";
 import { contarLinhasAlteradas, LIMITE_ALERTA } from "@/lib/linhas-alteradas";
 import { LIMITE_USOS, nomeDaFuncao, obtidoDoResultado, precheckDisponivel, resultadoDoUso } from "@/lib/precheck";
+import { situacaoDasDicas, type NivelDica } from "@/lib/dicas";
 import { reduzir } from "@/lib/maquina-exercicio";
 import { pdrDoEstado } from "@/lib/pdr";
 import type { RespostaTentativa } from "@/lib/tentativa";
@@ -29,6 +30,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const precheck = usePrecheck();
   const [enviando, setEnviando] = useState(false);   // cobre os dois POSTs e a execução
   const [verificando, setVerificando] = useState(false);
+  const [textosDicas, setTextosDicas] = useState<Partial<Record<NivelDica, string>>>({});
+  const [pedindoDica, setPedindoDica] = useState<NivelDica | null>(null);
 
   useEffect(() => {
     let ativo = true;
@@ -43,6 +46,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
         if (!ok) return setErro(corpo?.erro ?? "Não foi possível carregar o exercício.");
         setDados(corpo);
         despachar({ tipo: "carregou", estado: corpo.estado });
+        setTextosDicas(Object.fromEntries((corpo.dicas ?? []).map((d: { nivel: number; texto: string }) => [d.nivel, d.texto])));
       })
       .catch(() => ativo && setErro("Não foi possível carregar o exercício."));
     return () => {
@@ -138,6 +142,20 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   };
   const ultimoVerificar = estado.verificacoes.at(-1);
 
+  // Dica (RF-12): o servidor confere a liberação, grava o evento e devolve o texto.
+  const pedirDica = async (nivel: NivelDica) => {
+    if (pedindoDica !== null) return;
+    setPedindoDica(nivel);
+    try {
+      const r = await postar("/api/dica", { nivel });
+      if (!r.ok) return setAviso({ tipo: "erro", texto: r.corpo?.erro ?? "Não foi possível abrir a dica agora." });
+      setTextosDicas((t) => ({ ...t, [nivel]: r.corpo.texto }));
+      despachar({ tipo: "dica", nivel });
+    } finally {
+      setPedindoDica(null);
+    }
+  };
+
   if (erro) {
     return (
       <main className="mx-auto w-full max-w-4xl px-10 py-16">
@@ -200,7 +218,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       <aside className="flex flex-col gap-6">
         <PainelPontuacao exercicio={exercicio} estado={estado} numeroTentativa={tentativa.numero} />
         {travado && <AvisoLocalizacao />}
-        <PainelDicas editorTravado={travado} />
+        <PainelDicas situacoes={situacaoDasDicas(estado)} textos={textosDicas} pedindo={pedindoDica} aoPedir={pedirDica} />
       </aside>
     </main>
   );
