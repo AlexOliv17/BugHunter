@@ -18,10 +18,12 @@ export function lerPedido(corpo: unknown): PedidoTentativa | null {
   return null;
 }
 
+export type TesteExemplo = { chamada: string; entrada: unknown[]; esperado: unknown; entrada_repr: string; esperado_repr: string };
+
 export type LinhaExercicio = {
   tentativa_id: string; numero_tentativa: number; desfecho: string;
   codigo_com_defeito: string; assinatura: string; descricao: string;
-  teste_exemplo: { chamada: string; entrada: unknown[]; esperado: unknown };
+  teste_exemplo: TesteExemplo;
   tema_codigo: string; nivel: string;
 };
 
@@ -29,7 +31,7 @@ export type RespostaTentativa = {
   tentativa: { id: string; numero: number; multiplicador_repeticao: number };
   exercicio: {
     assinatura: string; descricao: string; codigo: string;
-    teste_exemplo: { chamada: string; entrada: unknown[]; esperado: unknown };
+    teste_exemplo: TesteExemplo;
     tema: string; nivel: Nivel; base: number;
   };
 };
@@ -44,7 +46,10 @@ export function montarResposta(l: LinhaExercicio): RespostaTentativa {
       assinatura: l.assinatura,
       descricao: l.descricao,
       codigo: l.codigo_com_defeito,
-      teste_exemplo: { chamada: l.teste_exemplo.chamada, entrada: l.teste_exemplo.entrada, esperado: l.teste_exemplo.esperado },
+      teste_exemplo: {
+        chamada: l.teste_exemplo.chamada, entrada: l.teste_exemplo.entrada, esperado: l.teste_exemplo.esperado,
+        entrada_repr: l.teste_exemplo.entrada_repr, esperado_repr: l.teste_exemplo.esperado_repr,
+      },
       tema: l.tema_codigo,
       nivel,
       base: BASE_POR_NIVEL[nivel],

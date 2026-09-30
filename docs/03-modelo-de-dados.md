@@ -131,7 +131,7 @@ Funções corretas das quais os exercícios derivam. Escritas à mão pelo autor
 | `assinatura` | text | não | ex. `media_das_notas(notas)`; atende RF-06 |
 | `descricao` | text | não | enunciado: o que faz, entrada e saída |
 | `codigo_correto` | text | não | forma canônica; é a resposta do exercício |
-| `teste_exemplo` | jsonb | não | `{chamada, entrada, esperado}`; `chamada` é o texto exibido, `entrada` a lista de argumentos; público |
+| `teste_exemplo` | jsonb | não | `{chamada, entrada, esperado, entrada_repr, esperado_repr}`; `chamada` é o texto exibido, `entrada` a lista de argumentos, e os `_repr` o texto que o Python mostraria (o JSON não distingue `8.0` de `8`); público |
 | `suite_oculta` | text | não | lista de casos em JSON, `[{entrada, esperado}, …]` (D-26); nunca vai ao cliente |
 
 **Sobre a forma canônica.** `codigo_correto` armazena o resultado de `ast.unparse(ast.parse(fonte))`, não o texto como foi digitado. O pipeline compara o mutado contra essa forma para achar `linha_defeito`; guardar o texto original faria a primeira divergência cair na linha 1, por causa da normalização de aspas, parênteses e comentários.

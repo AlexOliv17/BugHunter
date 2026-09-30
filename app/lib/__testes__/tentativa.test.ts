@@ -19,7 +19,7 @@ describe("lerPedido", () => {
 const linha = {
   tentativa_id: "t1", numero_tentativa: 1, desfecho: "aberto",
   codigo_com_defeito: "def f(x):\n    return x - 1", assinatura: "f(x)", descricao: "d",
-  teste_exemplo: { chamada: "f(1)", entrada: [1], esperado: 2 },
+  teste_exemplo: { chamada: "f(1)", entrada: [1], esperado: 2, entrada_repr: "1", esperado_repr: "2" },
   tema_codigo: "fundamentos", nivel: "medio",
 } satisfies LinhaExercicio;
 

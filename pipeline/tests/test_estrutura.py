@@ -78,6 +78,12 @@ class TestConteudo(unittest.TestCase):
         self.assertEqual(p.codigo_correto, "def dobro(x):\n    return x * 2")  # canônico, sem comentário
         self.assertEqual(p.id, id_programa("fundamentos", "dobro"))
         self.assertEqual(json.loads(p.linha_banco()["suite_oculta"])[0], {"entrada": [3], "esperado": 6})
+        self.assertEqual((p.teste_exemplo["entrada_repr"], p.teste_exemplo["esperado_repr"]), ("3", "6"))
+
+    def test_repr_preserva_decimal(self):
+        arq = self._programa_alterado(teste_exemplo={"chamada": "dobro(0.5)", "entrada": [0.5], "esperado": 1.0},
+                                      suite_oculta=[{"entrada": [0.5], "esperado": 1.0}, {"entrada": [2], "esperado": 4}])
+        self.assertEqual(carregar_programa(arq).teste_exemplo["esperado_repr"], "1.0")
 
     def test_id_e_estavel(self):
         self.assertEqual(str(id_programa("fundamentos", "dobro")), str(id_programa("fundamentos", "dobro")))
