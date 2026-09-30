@@ -1,0 +1,13 @@
+{
+  "name": "bughunter-testes-banco",
+  "private": true,
+  "type": "module",
+  "description": "Testes das migrations num Postgres 17 real e descartável (embedded-postgres).",
+  "scripts": {
+    "test": "node --test --test-concurrency=1 *.test.mjs"
+  },
+  "devDependencies": {
+    "embedded-postgres": "^17.10.0-beta.17",
+    "pg": "^8.23.0"
+  }
+}
