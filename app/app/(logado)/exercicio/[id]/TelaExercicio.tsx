@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { RespostaTentativa } from "@/lib/tentativa";
+import { EditorCodigo } from "./EditorCodigo";
 import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, TesteExemplo } from "./componentes";
 
 // Tela do exercício (telas 4, 5 e 6 — mesma rota em estados diferentes). Carrega a
@@ -56,15 +57,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
             <span className="font-semibold text-destaque">Editor travado</span>
             <span className="text-sm text-texto-secundario">Clique na linha onde você acha que está o defeito</span>
           </header>
-          {/* Editor CodeMirror 6: S3-02 */}
-          <pre className="bg-painel py-4 font-mono text-sm leading-8">
-            {exercicio.codigo.split("\n").map((linha, i) => (
-              <div key={i} className="flex px-4">
-                <span aria-hidden className="w-10 shrink-0 select-none text-texto-apagado">{i + 1}</span>
-                <span>{linha}</span>
-              </div>
-            ))}
-          </pre>
+          <EditorCodigo codigo={exercicio.codigo} somenteLeitura={editorTravado} />
         </section>
 
         <BarraAcoes editorTravado={editorTravado} />
