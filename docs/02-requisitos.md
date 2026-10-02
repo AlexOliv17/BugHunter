@@ -225,8 +225,9 @@ Ao encerrar uma tentativa, o sistema deve gerar um texto explicativo personaliza
 O sistema deve permitir nova tentativa de um exercício encerrado, com pontuação reduzida.
 
 - **Dado** uma tentativa encerrada, **quando** o aluno acionar refazer, **então** uma nova tentativa é criada com `numero_tentativa` incrementado.
-- **Dado** uma tentativa com `numero_tentativa` maior que 1, **quando** o PDR for calculado, **então** aplica `multiplicador_repeticao` igual a 0,5.
-- **Dado** o botão de refazer, **quando** for exibido, **então** informa que a repetição vale metade.
+- **Dado** uma tentativa com `numero_tentativa` maior que 1 de um exercício ainda não resolvido, **quando** o PDR for calculado, **então** aplica `multiplicador_repeticao` igual a 0,5.
+- **Dado** um exercício já resolvido numa tentativa anterior, **quando** o aluno o refizer, **então** a nova tentativa é treino e fecha com `pdr_final = 0`; a nota do exercício é a da primeira tentativa resolvida (D-31).
+- **Dado** o botão de refazer, **quando** for exibido, **então** informa se a repetição vale metade ou é treino, sem pontos.
 
 ### Registro
 

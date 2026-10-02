@@ -11,7 +11,7 @@ const DADOS: DadosEncerramento = {
   assinatura: "dobro(x)", descricao: "Devolve o dobro de x.", nome_funcao: "dobro",
   codigo_com_defeito: "def dobro(x):\n    return x + 2", codigo_correto: "def dobro(x):\n    return x * 2", linha_defeito: 2,
   categoria_nome: "operador aritmético trocado", categoria_descricao: "Uma operação usa o operador errado.",
-  nivel: "baixo", tema_codigo: "fundamentos",
+  nivel: "baixo", tema_codigo: "fundamentos", treino: false, ja_resolvido: false,
 };
 const ev = (tipo: string, payload: Record<string, unknown>) => ({ tipo, payload });
 

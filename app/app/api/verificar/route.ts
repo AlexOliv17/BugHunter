@@ -68,7 +68,7 @@ export async function POST(request: Request) {
     if (erroEventos || !eventos) return respostaErro(500, falha);
 
     const comEste: Evento[] = [...(eventos as Evento[]), { tipo: "verificar", payload: resultado }];
-    const pdr = calcularPdr(comEste, { base: BASE_POR_NIVEL[nivel], numero_tentativa: exercicio.numero_tentativa });
+    const pdr = calcularPdr(comEste, { base: BASE_POR_NIVEL[nivel], numero_tentativa: exercicio.numero_tentativa, treino: exercicio.treino });
     const { data: encerrada, error } = await banco.rpc("registrar_verificar", {
       ...ids, p_resultado: resultado.resultado, p_passados: resultado.passados, p_total: resultado.total,
       p_pdr: resultado.resultado === "passou" ? pdr : null, p_eventos_vistos: eventos.length,

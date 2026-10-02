@@ -9,6 +9,7 @@ export type DadosEncerramento = {
   assinatura: string; descricao: string; nome_funcao: string;
   codigo_com_defeito: string; codigo_correto: string; linha_defeito: number;
   categoria_nome: string; categoria_descricao: string; nivel: string; tema_codigo: string;
+  treino: boolean; ja_resolvido: boolean;   // D-31
 };
 
 export const SECOES = ["Qual era o defeito", "Por que passa despercebido", "Onde o raciocínio falhou"] as const;

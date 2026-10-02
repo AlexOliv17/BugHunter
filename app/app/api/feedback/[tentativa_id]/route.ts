@@ -39,6 +39,7 @@ export async function GET(_request: Request, ctx: RouteContext<"/api/feedback/[t
   const nivel = ehNivel(d.nivel) ? d.nivel : "baixo";
   return Response.json({
     desfecho: d.desfecho, pdr_final: d.pdr_final, numero_tentativa: d.numero_tentativa,
+    treino: d.treino, ja_resolvido: d.ja_resolvido,
     exercicio: { assinatura: d.assinatura, descricao: d.descricao, tema: d.tema_codigo, nivel, base: BASE_POR_NIVEL[nivel] },
     categoria: d.categoria_nome,
     estado: reconstruirEstado(eventos),
