@@ -324,6 +324,8 @@ Dentro de um tema e nível, na ordem:
 2. Senão, o exercício não resolvido de menor `ordem`.
 3. Senão, o exercício de menor `ordem`, sujeito a RN-07.
 
+O botão "Próximo exercício" da tela final aplica esta mesma regra excluindo o exercício recém-encerrado (D-29).
+
 Os passos 2 e 3 consideram apenas exercícios com `ativo = true` (D-21). O passo 1 não filtra por `ativo`: uma tentativa aberta num exercício desativado por uma versão nova do mutador continua sendo retomada, porque ela existe e o aluno já recebeu aquele código.
 
 ### RN-10 · Tentativa em aberto
@@ -530,8 +532,10 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-26 | Formato da suíte oculta | lista de casos `{entrada, esperado}` em JSON; o processo do aluno recebe só as entradas e a comparação ocorre no servidor | código de teste, que levaria entradas e respostas juntas ao processo do aluno |
 | D-27 | Comparação de números decimais | tolerância relativa de 10⁻⁹, elemento a elemento em listas; demais tipos com igualdade exata | igualdade exata, que reprova correções certas escritas de outro jeito |
 | D-28 | Sair da conta | botão Sair no cabeçalho das telas logadas, que encerra a sessão e volta ao login; entra com o cabeçalho da S2-04 | não oferecer saída na v1, impedindo trocar de conta no mesmo navegador |
+| D-29 | "Próximo exercício" na tela final | outro exercício do mesmo tema e nível: a RN-09 aplicada excluindo o exercício recém-encerrado (tentativa aberta de outro exercício do nível; senão o não resolvido de menor `ordem`; senão o de menor `ordem`, valendo metade). Se o nível só tiver aquele exercício, ele é reaberto | voltar à escolha de nível, ou aplicar a RN-09 sem exclusão, que reabriria o mesmo exercício depois de uma desistência |
+| D-30 | Navegação entre telas | botão Voltar em todas as telas logadas exceto Temas, para a tela anterior na hierarquia: nível → Temas; exercício → nível; resultado → nível (o exercício encerrado redirecionaria ao resultado). A marca BugHunter no cabeçalho leva sempre a Temas | depender do botão voltar do navegador |
 
-D-12 foi revista e D-16 a D-28 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2.
+D-12 foi revista e D-16 a D-28 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2. D-29 e D-30 foram decididas pelo P.O. na validação da sprint 5.
 
 ## 10. Riscos
 

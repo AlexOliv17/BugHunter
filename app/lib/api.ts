@@ -18,6 +18,7 @@ const ERROS_DO_BANCO: Record<string, [number, string]> = {
   BH006: [409, "Aponte a linha do defeito antes de editar e testar."],
   BH007: [409, "Os 3 Prechecks desta tentativa já foram usados."],
   BH008: [409, "A tentativa mudou enquanto o resultado era gravado. Tente de novo."],
+  BH011: [409, "Esta tentativa ainda está aberta."],
 };
 
 export function erroDoBanco(codigo: string | undefined, padrao: string) {

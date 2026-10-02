@@ -32,7 +32,10 @@ export async function POST(request: Request) {
   const linha = (linhas as LinhaExercicio[] | null)?.[0];
   // tentativa inexistente ou de outro aluno: mesma resposta, para não revelar qual (RNF-04)
   if (!linha) return erro(404, "Tentativa não encontrada.");
-  if (linha.desfecho !== "aberto") return erro(409, "Esta tentativa já foi encerrada.");
+  // encerrada: a tela leva ao resultado (RF-13, RF-15)
+  if (linha.desfecho !== "aberto") {
+    return Response.json({ erro: "Esta tentativa já foi encerrada.", encerrada: true }, { status: 409 });
+  }
 
   // RN-10: a tentativa volta no estado reconstruído a partir dos eventos
   const { data: eventos, error: erroEventos } = await banco

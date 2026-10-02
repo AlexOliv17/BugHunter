@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { reconstruirEstado } from "@/lib/estado";
@@ -10,7 +11,8 @@ import { situacaoDasDicas, type NivelDica } from "@/lib/dicas";
 import { reduzir } from "@/lib/maquina-exercicio";
 import { pdrDoEstado } from "@/lib/pdr";
 import type { RespostaTentativa } from "@/lib/tentativa";
-import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
+import { AvisoLocalizacao, BarraAcoes, Caminho, ConfirmarDesistencia, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
+import { Voltar } from "../../Voltar";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
 import { marcasDeEdicao } from "./marcas-edicao";
@@ -21,6 +23,7 @@ type Aviso = { tipo: "certo" | "errado" | "erro"; texto: string };
 // Tela do exercício (telas 4, 5 e 6 — mesma rota em estados diferentes). Carrega a
 // tentativa pelo endpoint (D-20), com o estado reconstruído dos eventos (RN-10).
 export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
+  const router = useRouter();
   const [dados, setDados] = useState<RespostaTentativa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [estado, despachar] = useReducer(reduzir, reconstruirEstado([]));
@@ -32,6 +35,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [verificando, setVerificando] = useState(false);
   const [textosDicas, setTextosDicas] = useState<Partial<Record<NivelDica, string>>>({});
   const [pedindoDica, setPedindoDica] = useState<NivelDica | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+  const [desistindo, setDesistindo] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -43,6 +48,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       .then(async (r) => ({ ok: r.ok, corpo: await r.json().catch(() => null) }))
       .then(({ ok, corpo }) => {
         if (!ativo) return;
+        // encerrada: o lugar dela é o resultado (RF-15)
+        if (corpo?.encerrada) return router.replace(`/exercicio/${tentativaId}/resultado`);
         if (!ok) return setErro(corpo?.erro ?? "Não foi possível carregar o exercício.");
         setDados(corpo);
         despachar({ tipo: "carregou", estado: corpo.estado });
@@ -52,7 +59,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
     return () => {
       ativo = false;
     };
-  }, [tentativaId]);
+  }, [tentativaId, router]);
 
   // Clique numa linha (RF-07): o servidor compara com linha_defeito e diz só se acertou.
   const apontar = useCallback(async (linha: number) => {
@@ -136,11 +143,24 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       despachar({ tipo: "editou", codigo });
       despachar({ tipo: "verificou", encerrada: r.corpo.encerrada === true,
         resultado: { resultado: r.corpo.resultado, passados: r.corpo.passados, total: r.corpo.total } });
+      // resolveu: o aluno é levado ao feedback final (RF-10)
+      if (r.corpo.encerrada === true) router.push(`/exercicio/${tentativaId}/resultado`);
     } finally {
       setVerificando(false);
     }
   };
   const ultimoVerificar = estado.verificacoes.at(-1);
+
+  // Desistência (RF-13): grava o código atual e encerra com PDR 0; depois, o resultado.
+  const desistir = async () => {
+    if (desistindo) return;
+    setDesistindo(true);
+    const r = await postar("/api/encerrar", { codigo: codigoNoEditor });
+    if (r.ok || r.corpo?.erro === "Esta tentativa já foi encerrada.") return router.push(`/exercicio/${tentativaId}/resultado`);
+    setDesistindo(false);
+    setConfirmando(false);
+    setAviso({ tipo: "erro", texto: r.corpo?.erro ?? "Não foi possível encerrar agora." });
+  };
 
   // Dica (RF-12): o servidor confere a liberação, grava o evento e devolve o texto.
   const pedirDica = async (nivel: NivelDica) => {
@@ -172,7 +192,10 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   return (
     <main className="mx-auto grid w-full max-w-[1400px] grid-cols-[1fr_24rem] gap-8 px-10 py-8">
       <div className="flex min-w-0 flex-col gap-6">
-        <Caminho exercicio={exercicio} />
+        <div className="flex items-center gap-6">
+          <Voltar href={`/temas/${exercicio.tema}`} para="a escolha de nível" />
+          <Caminho exercicio={exercicio} />
+        </div>
         <Enunciado exercicio={exercicio} />
         <TesteExemplo exercicio={exercicio} />
 
@@ -212,7 +235,9 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
           usados, limite: LIMITE_USOS,
           disponivel: !encerrada && !verificando && precheckDisponivel(usados, estado.editorLiberado),
           preparando: precheck.ambiente === "carregando", executando: enviando || precheck.ambiente === "executando",
-        }} aoVerificar={rodarVerificar} verificar={{ disponivel: !travado && !encerrada && !enviando, executando: verificando }} />
+        }} aoVerificar={rodarVerificar} verificar={{ disponivel: !travado && !encerrada && !enviando, executando: verificando }}
+          desistir={{ disponivel: !encerrada && !ocupado }} aoDesistir={() => setConfirmando(true)} />
+        {confirmando && <ConfirmarDesistencia enviando={desistindo} aoConfirmar={desistir} aoCancelar={() => setConfirmando(false)} />}
       </div>
 
       <aside className="flex flex-col gap-6">

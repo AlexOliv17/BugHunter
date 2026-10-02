@@ -13,14 +13,14 @@ type Exercicio = RespostaTentativa["exercicio"];
 
 const nomeNivel = (nivel: string) => (nivel === "medio" ? "Médio" : "Baixo");
 
-export function Caminho({ exercicio }: { exercicio: Exercicio }) {
+export function Caminho({ exercicio, final = "Exercício" }: { exercicio: Pick<Exercicio, "tema" | "nivel">; final?: string }) {
   return (
     <nav aria-label="Caminho" className="text-sm text-texto-secundario">
       <Link href="/temas" className="hover:text-texto">Temas</Link>
       <span aria-hidden className="mx-2">/</span>
       <Link href={`/temas/${exercicio.tema}`} className="hover:text-texto">{nomeNivel(exercicio.nivel)}</Link>
       <span aria-hidden className="mx-2">/</span>
-      <span className="text-texto">Exercício</span>
+      <span className="text-texto">{final}</span>
     </nav>
   );
 }
@@ -66,7 +66,7 @@ const pct = (x: number) => `−${Math.round(x * 100)}%`;
 // com o efeito de cada componente. Localização e reparo pesam sobre a base (40% e
 // 60%); dica e repetição multiplicam o resultado.
 export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
-  exercicio: Exercicio; estado: EstadoTentativa; numeroTentativa: number;
+  exercicio: Pick<Exercicio, "base" | "nivel">; estado: EstadoTentativa; numeroTentativa: number;
 }) {
   const { componentes: c, pdr, final } = pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: numeroTentativa });
   const loc = estado.localizacao;
@@ -84,13 +84,14 @@ export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
   if (falhas) linhas.push({ rotulo: `Verificar sem sucesso × ${falhas}`, valor: pct(PESO_REPARO * (1 - c.fatorReparo)), tom: "perda" });
   if (maiorDica) linhas.push({ rotulo: `Dica ${maiorDica} usada`, valor: pct(1 - c.multiplicadorDica), tom: "perda" });
   if (c.multiplicadorRepeticao < 1) linhas.push({ rotulo: "Repetição do exercício", valor: pct(1 - c.multiplicadorRepeticao), tom: "perda" });
+  if (c.desistiu) linhas.push({ rotulo: "Desistência", valor: "zera o PDR", tom: "perda" });
 
   const cor = { ok: "text-sucesso", perda: "text-perigo", neutro: "text-texto-apagado" };
   return (
     <section aria-label="Pontuação" className="rounded border border-borda bg-painel p-8">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-semibold tracking-wider text-texto-secundario">{final ? "PDR FINAL" : "PDR EM JOGO"}</h2>
-        <span aria-live="polite" className={`text-5xl font-semibold ${final ? "text-sucesso" : "text-destaque"}`}>{pdr}</span>
+        <span aria-live="polite" className={`text-5xl font-semibold ${!final ? "text-destaque" : pdr > 0 ? "text-sucesso" : "text-texto-secundario"}`}>{pdr}</span>
       </div>
       <dl className="mt-6 flex flex-col gap-2 text-sm">
         <div className="flex justify-between"><dt className="text-texto-secundario">Base — {nomeNivel(exercicio.nivel).toLowerCase()}</dt><dd className="font-mono">{exercicio.base}</dd></div>
@@ -100,7 +101,9 @@ export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
           </div>
         ))}
       </dl>
-      {!final && <p className="mt-5 text-xs leading-5 text-texto-apagado">O máximo que ainda dá para fazer, se o próximo passo der certo.</p>}
+      <p className="mt-5 text-xs leading-5 text-texto-apagado">
+        {final ? `de ${exercicio.base} possíveis neste nível.` : "O máximo que ainda dá para fazer, se o próximo passo der certo."}
+      </p>
     </section>
   );
 }
@@ -179,11 +182,12 @@ export type EstadoBotaoPrecheck = { usados: number; limite: number; disponivel: 
 
 export type EstadoBotaoVerificar = { disponivel: boolean; executando: boolean };
 
-export function BarraAcoes({ editorTravado, precheck, aoPrecheck, verificar, aoVerificar }: {
+export function BarraAcoes({ editorTravado, precheck, aoPrecheck, verificar, aoVerificar, desistir, aoDesistir }: {
   editorTravado: boolean; precheck: EstadoBotaoPrecheck; aoPrecheck: () => void;
   verificar: EstadoBotaoVerificar; aoVerificar: () => void;
+  desistir: { disponivel: boolean }; aoDesistir: () => void;
 }) {
-  // Desistir (disponível desde o início, D-17): S5-06.
+  // Desistir fica disponível desde o início, inclusive com o editor travado (D-17).
   // O contador mostra os usos consumidos: 3/3 quando esgota (RF-09).
   const rotulo = precheck.executando ? "Rodando…" : precheck.preparando && precheck.disponivel ? "Preparando o ambiente…" : "Precheck";
   return (
@@ -199,7 +203,8 @@ export function BarraAcoes({ editorTravado, precheck, aoPrecheck, verificar, aoV
       </button>
       {editorTravado && <span className="text-sm text-texto-apagado">Disponíveis após você apontar a linha</span>}
       {!editorTravado && precheck.usados >= precheck.limite && <span className="text-sm text-texto-apagado">Os 3 Prechecks desta tentativa foram usados</span>}
-      <button type="button" disabled title="Disponível em breve" className="ml-auto h-14 whitespace-nowrap rounded border border-borda px-6 font-semibold text-texto-apagado">
+      <button type="button" onClick={aoDesistir} disabled={!desistir.disponivel}
+        className="ml-auto h-14 whitespace-nowrap rounded border border-borda px-6 font-semibold text-perigo transition-colors enabled:hover:border-perigo disabled:text-texto-apagado">
         Desistir e ver o feedback
       </button>
     </div>
@@ -270,5 +275,32 @@ export function ResultadoDoVerificar({ resultado, numero, pdrFinal }: {
         </span>
       </div>
     </section>
+  );
+}
+
+// Confirmação da desistência (RF-13, RN-06): explícita e com a consequência à vista.
+export function ConfirmarDesistencia({ enviando, aoConfirmar, aoCancelar }: {
+  enviando: boolean; aoConfirmar: () => void; aoCancelar: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+      onKeyDown={(e) => e.key === "Escape" && !enviando && aoCancelar()}>
+      <section role="alertdialog" aria-modal="true" aria-labelledby="desistir-titulo" aria-describedby="desistir-texto"
+        className="w-full max-w-lg rounded border border-perigo/50 bg-painel p-8">
+        <h2 id="desistir-titulo" className="text-xl font-semibold">Desistir deste exercício?</h2>
+        <div id="desistir-texto" className="mt-4 flex flex-col gap-2 text-sm leading-6 text-texto-secundario">
+          <p>A tentativa é encerrada agora, com <strong className="text-perigo">PDR 0</strong>, e não pode ser retomada.</p>
+          <p>Em seguida você vê o defeito, o código correto e a explicação. Refazer o exercício depois vale metade.</p>
+        </div>
+        <div className="mt-8 flex justify-end gap-4">
+          <button type="button" onClick={aoCancelar} disabled={enviando} autoFocus
+            className="h-12 rounded border border-borda px-6 font-semibold hover:border-texto-apagado">Continuar tentando</button>
+          <button type="button" onClick={aoConfirmar} disabled={enviando}
+            className="h-12 rounded border border-perigo bg-perigo/10 px-6 font-semibold text-perigo hover:bg-perigo/20 disabled:opacity-60">
+            {enviando ? "Encerrando…" : "Desistir"}
+          </button>
+        </div>
+      </section>
+    </div>
   );
 }
