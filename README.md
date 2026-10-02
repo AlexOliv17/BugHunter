@@ -24,8 +24,8 @@ navegador ──► app (Vercel, gru1) ──► Supabase (sa-east-1)
    └── Precheck: Pyodide num Web Worker, servido pelo próprio domínio
 ```
 
-O navegador só fala com o Supabase para autenticação. Tudo o que envolve o exercício passa pelas rotas
-`/api/*` do app, que usam a chave de serviço e as funções do banco. Os quatro campos secretos (`suite_oculta`,
+O navegador não fala com o Supabase: login, cadastro e saída são ações de servidor, e tudo o que envolve o
+exercício passa pelas rotas `/api/*` do app, que usam a chave de serviço e as funções do banco. Os quatro campos secretos (`suite_oculta`,
 `codigo_correto`, `linha_defeito`, `categoria_codigo`) nunca saem antes do encerramento (RNF-03), e o esperado
 da suíte nunca chega ao executor: a comparação é feita no app (D-26).
 
