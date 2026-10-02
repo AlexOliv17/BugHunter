@@ -1,0 +1,34 @@
+# S6-01 (RNF-06): o plano gratuito do Supabase pausa projetos após cerca de sete
+# dias sem atividade. Uma vez por dia, esta rotina chama /api/saude em produção,
+# que faz uma consulta real ao banco. Nenhuma credencial fica no GitHub: quem
+# fala com o banco é o próprio servidor da aplicação.
+#
+# Observação: o GitHub desativa rotinas agendadas de repositórios sem nenhum commit
+# por 60 dias; nesse caso, reative em Actions → "Manter o banco ativo".
+
+name: Manter o banco ativo
+
+on:
+  schedule:
+    - cron: "17 9 * * *"   # todo dia, 06:17 em Brasília
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  saude:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      URL: ${{ vars.BUGHUNTER_URL || 'https://bug-hunter-alpha.vercel.app' }}
+    steps:
+      - name: Chamar /api/saude (até 3 tentativas)
+        run: |
+          for tentativa in 1 2 3; do
+            codigo=$(curl -s -o resposta.json -w "%{http_code}" --max-time 30 "$URL/api/saude" || true)
+            echo "tentativa $tentativa: HTTP $codigo $(cat resposta.json 2>/dev/null)"
+            [ "$codigo" = "200" ] && exit 0
+            sleep 30
+          done
+          echo "::error::/api/saude não respondeu 200; confira o projeto no Supabase e na Vercel"
+          exit 1

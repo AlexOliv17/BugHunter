@@ -1,5 +1,7 @@
 // Verificação de saúde (S0-03): confirma que o servidor alcança o Supabase
-// com as duas chaves. Responde só "conectado" ou "falhou" — nenhum valor de
+// com as duas chaves. A checagem com a chave de serviço faz uma consulta real ao
+// banco, e é ela que a rotina diária do GitHub Actions usa para que o plano
+// gratuito não pause o projeto por inatividade (S6-01, RNF-06). Responde só "conectado" ou "falhou" — nenhum valor de
 // variável de ambiente, URL ou mensagem de erro é devolvido ao cliente.
 
 type Estado = "conectado" | "falhou";
@@ -26,7 +28,7 @@ export async function GET() {
 
   const [publica, servico] = await Promise.all([
     verificar(`${base}/auth/v1/settings`, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
-    verificar(`${base}/rest/v1/`, process.env.SUPABASE_SERVICE_ROLE_KEY),
+    verificar(`${base}/rest/v1/temas?select=codigo&limit=1`, process.env.SUPABASE_SERVICE_ROLE_KEY),
   ]);
 
   const ok = publica === "conectado" && servico === "conectado";
