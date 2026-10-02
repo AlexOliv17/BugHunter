@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  codigoSubmetido, diferencas, entradaDoModelo, feedbackDeReserva, historico, normalizarFeedback,
+  codigoSubmetido, diferencas, entradaDoModelo, feedbackDeReserva, historico, linhaDoTempo, normalizarFeedback,
   secoesDoFeedback, SECOES, type DadosEncerramento,
 } from "../feedback";
 
@@ -92,5 +92,21 @@ describe("texto do modelo", () => {
     expect(secoesDoFeedback("## **Qual era o defeito**\nA linha 2.\n\n## Outra\nB")).toEqual([
       { titulo: "Qual era o defeito", paragrafos: ["A linha 2."] }, { titulo: "Outra", paragrafos: ["B"] }]);
     expect(secoesDoFeedback("só texto")).toEqual([{ titulo: null, paragrafos: ["só texto"] }]);
+  });
+});
+
+describe("linha do tempo da tela final", () => {
+  it("ações em ordem, com a hora, sem as edições", () => {
+    const em = "2026-10-02T17:02:00Z";
+    const m = linhaDoTempo([
+      { tipo: "localizou", payload: { linha: 6, correta: false }, em }, { tipo: "editou", payload: { codigo: "x" }, em },
+      { tipo: "precheck", payload: { resultado: "falhou" }, em }, { tipo: "verificar", payload: { resultado: "falhou", passados: 2, total: 7 }, em },
+      { tipo: "dica", payload: { nivel: 1 }, em }, { tipo: "encerrou", payload: { desfecho: "desistiu" }, em },
+    ]);
+    expect(m.map((x) => [x.texto, x.destaque, x.tom])).toEqual([
+      ["Apontou a linha 6", "incorreta", "erro"], ["Precheck 1", "falhou", "erro"], ["Verificar", "2 de 7 testes", "erro"],
+      ["Abriu a dica 1", null, null], ["Desistiu", null, null],
+    ]);
+    expect(m[0].em).toBe(em);
   });
 });

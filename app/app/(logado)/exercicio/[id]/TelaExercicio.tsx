@@ -11,7 +11,7 @@ import { situacaoDasDicas, type NivelDica } from "@/lib/dicas";
 import { reduzir } from "@/lib/maquina-exercicio";
 import { pdrDoEstado } from "@/lib/pdr";
 import type { RespostaTentativa } from "@/lib/tentativa";
-import { AvisoLocalizacao, BarraAcoes, Caminho, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
+import { AvisoLocalizacao, BarraAcoes, Caminho, ConfirmarDesistencia, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
 import { marcasDeEdicao } from "./marcas-edicao";
@@ -34,6 +34,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   const [verificando, setVerificando] = useState(false);
   const [textosDicas, setTextosDicas] = useState<Partial<Record<NivelDica, string>>>({});
   const [pedindoDica, setPedindoDica] = useState<NivelDica | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+  const [desistindo, setDesistindo] = useState(false);
 
   useEffect(() => {
     let ativo = true;
@@ -148,6 +150,17 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   };
   const ultimoVerificar = estado.verificacoes.at(-1);
 
+  // Desistência (RF-13): grava o código atual e encerra com PDR 0; depois, o resultado.
+  const desistir = async () => {
+    if (desistindo) return;
+    setDesistindo(true);
+    const r = await postar("/api/encerrar", { codigo: codigoNoEditor });
+    if (r.ok || r.corpo?.erro === "Esta tentativa já foi encerrada.") return router.push(`/exercicio/${tentativaId}/resultado`);
+    setDesistindo(false);
+    setConfirmando(false);
+    setAviso({ tipo: "erro", texto: r.corpo?.erro ?? "Não foi possível encerrar agora." });
+  };
+
   // Dica (RF-12): o servidor confere a liberação, grava o evento e devolve o texto.
   const pedirDica = async (nivel: NivelDica) => {
     if (pedindoDica !== null) return;
@@ -218,7 +231,9 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
           usados, limite: LIMITE_USOS,
           disponivel: !encerrada && !verificando && precheckDisponivel(usados, estado.editorLiberado),
           preparando: precheck.ambiente === "carregando", executando: enviando || precheck.ambiente === "executando",
-        }} aoVerificar={rodarVerificar} verificar={{ disponivel: !travado && !encerrada && !enviando, executando: verificando }} />
+        }} aoVerificar={rodarVerificar} verificar={{ disponivel: !travado && !encerrada && !enviando, executando: verificando }}
+          desistir={{ disponivel: !encerrada && !ocupado }} aoDesistir={() => setConfirmando(true)} />
+        {confirmando && <ConfirmarDesistencia enviando={desistindo} aoConfirmar={desistir} aoCancelar={() => setConfirmando(false)} />}
       </div>
 
       <aside className="flex flex-col gap-6">
