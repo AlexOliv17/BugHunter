@@ -52,7 +52,13 @@ linha(proibidos === 0, `${scripts.size} scripts publicados, ${proibidos} com con
 const local = fileURLToPath(new URL("../.next/static", import.meta.url));
 if (existsSync(local)) {
   const arquivos = [];
-  const andar = (d) => { for (const n of readdirSync(d)) { const p = join(d, n); statSync(p).isDirectory() ? andar(p) : p.endsWith(".js") && arquivos.push(p); } };
+  const andar = (d) => {
+    for (const n of readdirSync(d)) {
+      const p = join(d, n);
+      if (statSync(p).isDirectory()) andar(p);
+      else if (p.endsWith(".js")) arquivos.push(p);
+    }
+  };
   andar(local);
   const ruins = arquivos.filter((p) => PROIBIDO.test(readFileSync(p, "utf8")));
   linha(ruins.length === 0, `build local: ${arquivos.length} pedaços de JavaScript, ${ruins.length} com conteúdo proibido`);
