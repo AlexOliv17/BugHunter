@@ -7,7 +7,7 @@ As três verificações viraram scripts, para serem repetidas a cada publicaçã
 
 | Script | O que verifica | Resultado |
 |---|---|---|
-| `node supabase/testes/auditoria-producao.mjs` | banco publicado: privilégios pelo catálogo, RLS, e tentativas reais de acesso direto com a chave pública | 38 verificações, 0 alertas |
+| `node supabase/testes/auditoria-producao.mjs` | banco publicado: privilégios pelo catálogo, RLS, e tentativas reais de acesso direto com a chave pública | 36 verificações, 0 alertas |
 | `node app/scripts/auditoria-publicada.mjs` | aplicação publicada: rotas sem login, telas logadas sem login, HTML e JavaScript entregues ao navegador, build local | 21 verificações, 0 alertas |
 | `python executor/tests/isolamento_remoto.py <url>` | executor publicado: ambiente, arquivos, memória, laço, processos, saída de rede | ver §3 |
 
