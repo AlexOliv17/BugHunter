@@ -30,6 +30,20 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [refazendo, setRefazendo] = useState(false);
+  const [erroRefazer, setErroRefazer] = useState<string | null>(null);
+
+  // Refazer (RF-16): nova tentativa do mesmo exercício, que vale metade (RN-07)
+  const refazer = async () => {
+    setRefazendo(true);
+    setErroRefazer(null);
+    const r = await fetch("/api/refazer", {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tentativa_id: tentativaId }),
+    }).catch(() => null).then(lerJson);
+    if (r.ok) return router.push(`/exercicio/${r.corpo.tentativa_id}`);
+    setRefazendo(false);
+    setErroRefazer(r.corpo?.erro ?? "Não foi possível abrir o exercício de novo agora.");
+  };
 
   useEffect(() => {
     let ativo = true;
@@ -94,10 +108,13 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
           className="flex h-14 items-center rounded bg-destaque px-8 font-semibold text-sobre-destaque hover:opacity-90">
           Próximo exercício
         </Link>
-        <Link href="/temas" className="flex h-14 items-center rounded border border-borda px-8 font-semibold text-texto-secundario hover:text-texto">
-          Voltar aos temas
-        </Link>
+        <button type="button" onClick={refazer} disabled={refazendo}
+          className="h-14 rounded border border-borda px-8 font-semibold transition-colors enabled:hover:border-texto-apagado disabled:opacity-60">
+          {refazendo ? "Abrindo…" : "Tentar este de novo (vale 50%)"}
+        </button>
+        <Link href="/temas" className="ml-auto text-sm text-texto-secundario hover:text-texto">Voltar aos temas</Link>
       </div>
+      {erroRefazer && <p role="alert" className="mt-3 text-sm text-perigo">{erroRefazer}</p>}
     </main>
   );
 }
