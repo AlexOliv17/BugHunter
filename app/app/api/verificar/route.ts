@@ -41,12 +41,15 @@ export async function POST(request: Request) {
   const exercicio = (linhas as LinhaExercicio[] | null)?.[0];
   if (!exercicio) return respostaErro(404, "Tentativa não encontrada.");
 
-  const { error: erroEdicao } = await banco.rpc("registrar_edicao", {
-    ...ids, p_codigo: codigo, p_linhas_alteradas: contarLinhasAlteradas(exercicio.codigo_com_defeito, codigo),
-  });
+  // o registro do código e a leitura da suíte não dependem um do outro (RNF-02);
+  // o evento verificar só é gravado depois, então o editou continua vindo antes
+  const [{ error: erroEdicao }, { data: suites, error: erroSuite }] = await Promise.all([
+    banco.rpc("registrar_edicao", {
+      ...ids, p_codigo: codigo, p_linhas_alteradas: contarLinhasAlteradas(exercicio.codigo_com_defeito, codigo),
+    }),
+    banco.rpc("suite_da_tentativa", ids),
+  ]);
   if (erroEdicao) return erroDoBanco(erroEdicao.code, falha);
-
-  const { data: suites, error: erroSuite } = await banco.rpc("suite_da_tentativa", ids);
   if (erroSuite) return erroDoBanco(erroSuite.code, falha);
   const suite = (suites as { suite_oculta: string; nome_funcao: string }[] | null)?.[0];
   if (!suite) return respostaErro(500, falha);

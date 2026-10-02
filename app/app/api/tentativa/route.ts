@@ -37,13 +37,13 @@ export async function POST(request: Request) {
     return Response.json({ erro: "Esta tentativa já foi encerrada.", encerrada: true }, { status: 409 });
   }
 
-  // RN-10: a tentativa volta no estado reconstruído a partir dos eventos
-  const { data: eventos, error: erroEventos } = await banco
-    .from("eventos").select("tipo, payload").eq("tentativa_id", tentativaId).order("em").order("id");
-  if (erroEventos) return erro(500, "Não foi possível carregar o exercício agora.");
-  // textos das dicas já abertas, para mostrá-las de novo (RF-12)
-  const { data: dicas, error: erroDicas } = await banco.rpc("dicas_da_tentativa", { p_usuario: usuario.id, p_tentativa: tentativaId });
-  if (erroDicas) return erro(500, "Não foi possível carregar o exercício agora.");
+  // RN-10: a tentativa volta no estado reconstruído a partir dos eventos, com os
+  // textos das dicas já abertas (RF-12); as duas leituras correm juntas (RNF-02)
+  const [{ data: eventos, error: erroEventos }, { data: dicas, error: erroDicas }] = await Promise.all([
+    banco.from("eventos").select("tipo, payload").eq("tentativa_id", tentativaId).order("em").order("id"),
+    banco.rpc("dicas_da_tentativa", { p_usuario: usuario.id, p_tentativa: tentativaId }),
+  ]);
+  if (erroEventos || erroDicas) return erro(500, "Não foi possível carregar o exercício agora.");
 
   return Response.json(montarResposta(linha, reconstruirEstado(eventos as Evento[]), (dicas as DicaAberta[] | null) ?? []),
     { headers: { "cache-control": "no-store" } });
