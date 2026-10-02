@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { Voltar } from "../../Voltar";
 import { BotaoComecar } from "./BotaoComecar";
 import { montarNiveis, type CardNivel, type NivelDoTema } from "@/lib/niveis";
 import { exigirUsuario } from "@/lib/sessao";
@@ -66,6 +67,7 @@ export default async function PaginaNivel({ params }: PageProps<"/temas/[tema]">
 
   return (
     <main className="mx-auto w-full max-w-6xl px-10 py-12">
+      <div className="mb-6"><Voltar href="/temas" para="os temas" /></div>
       <nav aria-label="Caminho" className="text-sm text-texto-secundario">
         <Link href="/temas" className="hover:text-texto">Temas</Link>
         <span aria-hidden className="mx-2">/</span>

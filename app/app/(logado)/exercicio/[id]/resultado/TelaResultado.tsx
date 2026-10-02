@@ -11,6 +11,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { EstadoTentativa } from "@/lib/estado";
 import { secoesDoFeedback, type MarcoDaLinhaDoTempo } from "@/lib/feedback";
 import type { Nivel } from "@/lib/niveis";
+import { Voltar } from "../../../Voltar";
 import { Caminho, PainelPontuacao } from "../componentes";
 
 type Resultado = {
@@ -30,19 +31,19 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  const [refazendo, setRefazendo] = useState(false);
-  const [erroRefazer, setErroRefazer] = useState<string | null>(null);
+  const [abrindo, setAbrindo] = useState<"proximo" | "refazer" | null>(null);
+  const [erroAbrir, setErroAbrir] = useState<string | null>(null);
 
-  // Refazer (RF-16): nova tentativa do mesmo exercício, que vale metade (RN-07)
-  const refazer = async () => {
-    setRefazendo(true);
-    setErroRefazer(null);
-    const r = await fetch("/api/refazer", {
+  // Próximo exercício do nível (D-29) ou o mesmo de novo, valendo metade (RF-16, RN-07)
+  const abrir = async (qual: "proximo" | "refazer") => {
+    setAbrindo(qual);
+    setErroAbrir(null);
+    const r = await fetch(`/api/${qual}`, {
       method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tentativa_id: tentativaId }),
     }).catch(() => null).then(lerJson);
     if (r.ok) return router.push(`/exercicio/${r.corpo.tentativa_id}`);
-    setRefazendo(false);
-    setErroRefazer(r.corpo?.erro ?? "Não foi possível abrir o exercício de novo agora.");
+    setAbrindo(null);
+    setErroAbrir(r.corpo?.erro ?? "Não foi possível abrir o exercício agora.");
   };
 
   useEffect(() => {
@@ -83,7 +84,10 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
   const resolvido = dados.desfecho === "resolvido";
   return (
     <main className="mx-auto w-full max-w-[1400px] px-10 py-8">
-      <Caminho exercicio={dados.exercicio} final="Exercício — encerrado" />
+      <div className="flex items-center gap-6">
+        <Voltar href={`/temas/${dados.exercicio.tema}`} para="a escolha de nível" />
+        <Caminho exercicio={dados.exercicio} final="Exercício — encerrado" />
+      </div>
       <h1 className="mt-8 text-4xl font-semibold">{resolvido ? "Exercício resolvido" : "Tentativa encerrada"}</h1>
       <p className="mt-3 text-texto-secundario">
         {resolvido
@@ -104,17 +108,16 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center gap-4">
-        <Link href={`/temas/${dados.exercicio.tema}`}
-          className="flex h-14 items-center rounded bg-destaque px-8 font-semibold text-sobre-destaque hover:opacity-90">
-          Próximo exercício
-        </Link>
-        <button type="button" onClick={refazer} disabled={refazendo}
-          className="h-14 rounded border border-borda px-8 font-semibold transition-colors enabled:hover:border-texto-apagado disabled:opacity-60">
-          {refazendo ? "Abrindo…" : "Tentar este de novo (vale 50%)"}
+        <button type="button" onClick={() => abrir("proximo")} disabled={abrindo !== null}
+          className="h-14 rounded bg-destaque px-8 font-semibold text-sobre-destaque transition-opacity enabled:hover:opacity-90 disabled:opacity-60">
+          {abrindo === "proximo" ? "Abrindo…" : "Próximo exercício"}
         </button>
-        <Link href="/temas" className="ml-auto text-sm text-texto-secundario hover:text-texto">Voltar aos temas</Link>
+        <button type="button" onClick={() => abrir("refazer")} disabled={abrindo !== null}
+          className="h-14 rounded border border-borda px-8 font-semibold transition-colors enabled:hover:border-texto-apagado disabled:opacity-60">
+          {abrindo === "refazer" ? "Abrindo…" : "Tentar este de novo (vale 50%)"}
+        </button>
       </div>
-      {erroRefazer && <p role="alert" className="mt-3 text-sm text-perigo">{erroRefazer}</p>}
+      {erroAbrir && <p role="alert" className="mt-3 text-sm text-perigo">{erroAbrir}</p>}
     </main>
   );
 }

@@ -12,6 +12,7 @@ import { reduzir } from "@/lib/maquina-exercicio";
 import { pdrDoEstado } from "@/lib/pdr";
 import type { RespostaTentativa } from "@/lib/tentativa";
 import { AvisoLocalizacao, BarraAcoes, Caminho, ConfirmarDesistencia, Enunciado, PainelDicas, PainelPontuacao, ResultadoDoPrecheck, ResultadoDoVerificar, TesteExemplo } from "./componentes";
+import { Voltar } from "../../Voltar";
 import { EditorCodigo } from "./EditorCodigo";
 import { modoLocalizacao } from "./localizacao";
 import { marcasDeEdicao } from "./marcas-edicao";
@@ -191,7 +192,10 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
   return (
     <main className="mx-auto grid w-full max-w-[1400px] grid-cols-[1fr_24rem] gap-8 px-10 py-8">
       <div className="flex min-w-0 flex-col gap-6">
-        <Caminho exercicio={exercicio} />
+        <div className="flex items-center gap-6">
+          <Voltar href={`/temas/${exercicio.tema}`} para="a escolha de nível" />
+          <Caminho exercicio={exercicio} />
+        </div>
         <Enunciado exercicio={exercicio} />
         <TesteExemplo exercicio={exercicio} />
 
