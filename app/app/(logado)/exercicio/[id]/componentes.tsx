@@ -13,14 +13,14 @@ type Exercicio = RespostaTentativa["exercicio"];
 
 const nomeNivel = (nivel: string) => (nivel === "medio" ? "Médio" : "Baixo");
 
-export function Caminho({ exercicio }: { exercicio: Exercicio }) {
+export function Caminho({ exercicio, final = "Exercício" }: { exercicio: Pick<Exercicio, "tema" | "nivel">; final?: string }) {
   return (
     <nav aria-label="Caminho" className="text-sm text-texto-secundario">
       <Link href="/temas" className="hover:text-texto">Temas</Link>
       <span aria-hidden className="mx-2">/</span>
       <Link href={`/temas/${exercicio.tema}`} className="hover:text-texto">{nomeNivel(exercicio.nivel)}</Link>
       <span aria-hidden className="mx-2">/</span>
-      <span className="text-texto">Exercício</span>
+      <span className="text-texto">{final}</span>
     </nav>
   );
 }
@@ -66,7 +66,7 @@ const pct = (x: number) => `−${Math.round(x * 100)}%`;
 // com o efeito de cada componente. Localização e reparo pesam sobre a base (40% e
 // 60%); dica e repetição multiplicam o resultado.
 export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
-  exercicio: Exercicio; estado: EstadoTentativa; numeroTentativa: number;
+  exercicio: Pick<Exercicio, "base" | "nivel">; estado: EstadoTentativa; numeroTentativa: number;
 }) {
   const { componentes: c, pdr, final } = pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: numeroTentativa });
   const loc = estado.localizacao;
@@ -84,13 +84,14 @@ export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
   if (falhas) linhas.push({ rotulo: `Verificar sem sucesso × ${falhas}`, valor: pct(PESO_REPARO * (1 - c.fatorReparo)), tom: "perda" });
   if (maiorDica) linhas.push({ rotulo: `Dica ${maiorDica} usada`, valor: pct(1 - c.multiplicadorDica), tom: "perda" });
   if (c.multiplicadorRepeticao < 1) linhas.push({ rotulo: "Repetição do exercício", valor: pct(1 - c.multiplicadorRepeticao), tom: "perda" });
+  if (c.desistiu) linhas.push({ rotulo: "Desistência", valor: "zera o PDR", tom: "perda" });
 
   const cor = { ok: "text-sucesso", perda: "text-perigo", neutro: "text-texto-apagado" };
   return (
     <section aria-label="Pontuação" className="rounded border border-borda bg-painel p-8">
       <div className="flex items-baseline justify-between">
         <h2 className="text-xs font-semibold tracking-wider text-texto-secundario">{final ? "PDR FINAL" : "PDR EM JOGO"}</h2>
-        <span aria-live="polite" className={`text-5xl font-semibold ${final ? "text-sucesso" : "text-destaque"}`}>{pdr}</span>
+        <span aria-live="polite" className={`text-5xl font-semibold ${!final ? "text-destaque" : pdr > 0 ? "text-sucesso" : "text-texto-secundario"}`}>{pdr}</span>
       </div>
       <dl className="mt-6 flex flex-col gap-2 text-sm">
         <div className="flex justify-between"><dt className="text-texto-secundario">Base — {nomeNivel(exercicio.nivel).toLowerCase()}</dt><dd className="font-mono">{exercicio.base}</dd></div>
@@ -100,7 +101,9 @@ export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
           </div>
         ))}
       </dl>
-      {!final && <p className="mt-5 text-xs leading-5 text-texto-apagado">O máximo que ainda dá para fazer, se o próximo passo der certo.</p>}
+      <p className="mt-5 text-xs leading-5 text-texto-apagado">
+        {final ? `de ${exercicio.base} possíveis neste nível.` : "O máximo que ainda dá para fazer, se o próximo passo der certo."}
+      </p>
     </section>
   );
 }

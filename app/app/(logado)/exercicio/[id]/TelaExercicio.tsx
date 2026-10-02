@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { reconstruirEstado } from "@/lib/estado";
@@ -21,6 +22,7 @@ type Aviso = { tipo: "certo" | "errado" | "erro"; texto: string };
 // Tela do exercício (telas 4, 5 e 6 — mesma rota em estados diferentes). Carrega a
 // tentativa pelo endpoint (D-20), com o estado reconstruído dos eventos (RN-10).
 export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
+  const router = useRouter();
   const [dados, setDados] = useState<RespostaTentativa | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [estado, despachar] = useReducer(reduzir, reconstruirEstado([]));
@@ -43,6 +45,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       .then(async (r) => ({ ok: r.ok, corpo: await r.json().catch(() => null) }))
       .then(({ ok, corpo }) => {
         if (!ativo) return;
+        // encerrada: o lugar dela é o resultado (RF-15)
+        if (corpo?.encerrada) return router.replace(`/exercicio/${tentativaId}/resultado`);
         if (!ok) return setErro(corpo?.erro ?? "Não foi possível carregar o exercício.");
         setDados(corpo);
         despachar({ tipo: "carregou", estado: corpo.estado });
@@ -52,7 +56,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
     return () => {
       ativo = false;
     };
-  }, [tentativaId]);
+  }, [tentativaId, router]);
 
   // Clique numa linha (RF-07): o servidor compara com linha_defeito e diz só se acertou.
   const apontar = useCallback(async (linha: number) => {
@@ -136,6 +140,8 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       despachar({ tipo: "editou", codigo });
       despachar({ tipo: "verificou", encerrada: r.corpo.encerrada === true,
         resultado: { resultado: r.corpo.resultado, passados: r.corpo.passados, total: r.corpo.total } });
+      // resolveu: o aluno é levado ao feedback final (RF-10)
+      if (r.corpo.encerrada === true) router.push(`/exercicio/${tentativaId}/resultado`);
     } finally {
       setVerificando(false);
     }

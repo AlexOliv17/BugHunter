@@ -19,10 +19,10 @@ export async function lerEncerramento(banco: SupabaseClient, usuarioId: string, 
   return { dados } as const;
 }
 
-export async function lerEventos(banco: SupabaseClient, tentativaId: string): Promise<Evento[] | null> {
+export async function lerEventos(banco: SupabaseClient, tentativaId: string): Promise<(Evento & { em: string })[] | null> {
   const { data, error } = await banco
-    .from("eventos").select("tipo, payload").eq("tentativa_id", tentativaId).order("em").order("id");
-  return error ? null : (data as Evento[]);
+    .from("eventos").select("tipo, payload, em").eq("tentativa_id", tentativaId).order("em").order("id");
+  return error ? null : (data as (Evento & { em: string })[]);
 }
 
 export async function garantirFeedback(banco: SupabaseClient, usuarioId: string, tentativaId: string): Promise<string | null> {

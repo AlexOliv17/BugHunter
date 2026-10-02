@@ -139,3 +139,24 @@ export function secoesDoFeedback(texto: string): { titulo: string | null; paragr
   }
   return secoes;
 }
+
+export type MarcoDaLinhaDoTempo = { em: string; texto: string; destaque: string | null; tom: "ok" | "erro" | null };
+
+// Linha do tempo da tela final: as ações que importam, com a hora (edições ficam de fora).
+export function linhaDoTempo(eventos: (Evento & { em: string })[]): MarcoDaLinhaDoTempo[] {
+  const marcos: MarcoDaLinhaDoTempo[] = [];
+  let precheck = 0;
+  for (const e of eventos) {
+    const p = e.payload;
+    const m = (texto: string, destaque: string | null = null, tom: "ok" | "erro" | null = null) => marcos.push({ em: e.em, texto, destaque, tom });
+    if (e.tipo === "localizou") m(`Apontou a linha ${p.linha}`, p.correta ? "correta" : "incorreta", p.correta ? "ok" : "erro");
+    else if (e.tipo === "dica") m(`Abriu a dica ${p.nivel}`);
+    else if (e.tipo === "precheck") {
+      precheck += 1;
+      const passou = p.resultado === "passou";
+      m(`Precheck ${precheck}`, passou ? "passou" : p.resultado === "tempo_excedido" ? "tempo excedido" : p.resultado === "erro" ? "erro" : "falhou", passou ? "ok" : "erro");
+    } else if (e.tipo === "verificar") m("Verificar", `${p.passados} de ${p.total} testes`, p.resultado === "passou" ? "ok" : "erro");
+    else if (e.tipo === "encerrou") m(p.desfecho === "resolvido" ? "Resolveu" : "Desistiu", null, p.desfecho === "resolvido" ? "ok" : null);
+  }
+  return marcos;
+}
