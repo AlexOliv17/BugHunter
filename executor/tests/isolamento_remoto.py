@@ -121,6 +121,17 @@ def f():
     return {"criou_processo": True}
 '''
 
+REDE = r'''
+import socket
+def f():
+    # só se a conexão abre; nada é enviado
+    try:
+        socket.create_connection(("1.1.1.1", 443), timeout=2).close()
+        return {"conecta_para_fora": True}
+    except Exception:
+        return {"conecta_para_fora": False}
+'''
+
 NORMAL = "def f(x):\n    return x * 2\n"
 
 
@@ -174,6 +185,10 @@ def main():
               st == 200 and r and r.get("situacao") == "tempo_excedido" and dt < 12)
     st, r, _ = chamar(args.url, chave, NORMAL, ([3],))
     registrar("chamada normal depois do laço", valor(r), "int 6", st == 200 and valor(r) == {"t": "int", "v": "6"})
+
+    st, r, _ = chamar(args.url, chave, REDE)
+    v = valor(r) or {}
+    registrar("saída de rede do processo do aluno", v.get("conecta_para_fora"), "informativo (não há credenciais para levar)", True)
 
     st, r, _ = chamar(args.url, chave, NETOS)
     registrar("processo que tenta sobreviver", r and r.get("situacao"), "ok (o grupo é encerrado no fim)", st == 200)
