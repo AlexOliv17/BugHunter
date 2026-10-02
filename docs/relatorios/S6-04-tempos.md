@@ -1,6 +1,6 @@
 # S6-04 · Tempos de resposta (RNF-02)
 
-Data: 2026-10-02 · Medido de fora, de Minas Gerais, sem login, com `node app/scripts/medir-tempos.mjs`.
+Data: 2026-10-02 · Medido de fora da Vercel, sem login, com `node app/scripts/medir-tempos.mjs`.
 
 ## 1. Achado: a função e o banco estavam em continentes diferentes
 
