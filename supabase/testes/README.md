@@ -19,4 +19,5 @@ aplica as migrations em ordem e apaga tudo ao terminar.
 | `edicao-precheck.test.mjs` | `registrar_edicao` e `registrar_precheck`: RN-12, limite de 3 usos (RN-02) sob concorrência |
 | `verificar.test.mjs` | `suite_da_tentativa` e `registrar_verificar`: encerramento com PDR, recusa de estado incoerente e concorrência (RF-10) |
 | `dicas.test.mjs` | `solicitar_dica` e `dicas_da_tentativa`: condições de liberação da RN-04, dica repetida sem novo custo, concorrência (RF-12) |
+| `encerramento.test.mjs` | `encerrar_por_desistencia`, `dados_do_encerramento` e `gravar_feedback`: desistência com PDR 0, gabarito só de tentativa encerrada do dono, feedback gravado uma vez (RF-13, RF-15) |
 | `auditoria.test.mjs` | RNF-03: varre o catálogo e confere, para `anon` e `authenticated`, exatamente as tabelas, colunas e funções permitidas; nenhum dos quatro segredos é legível (S3-08) |

@@ -8,7 +8,10 @@
 // A resposta traz só resultado, passados, total e, se encerrou, o PDR final: nada
 // sobre o conteúdo dos testes (RN-03, RNF-03).
 
+import { after } from "next/server";
+
 import { erroDoBanco, lerPedidoDaTentativa, respostaErro } from "@/lib/api";
+import { garantirFeedback } from "@/lib/encerramento";
 import type { Evento } from "@/lib/estado";
 import { chamarExecutor, ExecutorIndisponivel } from "@/lib/executor";
 import { contarLinhasAlteradas } from "@/lib/linhas-alteradas";
@@ -73,6 +76,8 @@ export async function POST(request: Request) {
     if (error?.code === "BH008" && vez < TENTATIVAS_DE_GRAVAR) continue;
     if (error) return erroDoBanco(error.code, falha);
 
+    // encerrou: o feedback é gerado agora, depois da resposta (RF-15)
+    if (encerrada === true) after(() => garantirFeedback(banco, pedido.usuario.id, pedido.tentativaId));
     return Response.json(
       { ...resultado, encerrada: encerrada === true, ...(encerrada === true ? { pdr_final: pdr } : {}) },
       { headers: { "cache-control": "no-store" } },
