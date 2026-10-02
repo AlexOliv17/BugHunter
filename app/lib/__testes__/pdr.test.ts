@@ -121,3 +121,14 @@ describe("pdrDoEstado: painel ao vivo (S4-04)", () => {
     expect(pdrDoEstado(estado(eventos), BAIXO)).toMatchObject({ pdr: 85, final: true });
   });
 });
+
+describe("treino (D-31)", () => {
+  const eventos = [loc(4, true), ver("passou")];
+  it("repetição de exercício já resolvido: PDR 0, com os demais componentes calculados", () => {
+    expect(calcularPdr(eventos, { base: 100, numero_tentativa: 2, treino: true })).toBe(0);
+    expect(componentesPdr(eventos, { base: 100, numero_tentativa: 2, treino: true })).toMatchObject({ treino: true, fatorLocalizacao: 1 });
+  });
+  it("repetição de exercício ainda não resolvido continua valendo 0,5 (RN-07)", () => {
+    expect(calcularPdr(eventos, { base: 100, numero_tentativa: 2 })).toBe(50);
+  });
+});

@@ -65,10 +65,10 @@ const pct = (x: number) => `−${Math.round(x * 100)}%`;
 // Painel de pontuação ao vivo (S4-04, RF-14): o mesmo cálculo do servidor (RN-05),
 // com o efeito de cada componente. Localização e reparo pesam sobre a base (40% e
 // 60%); dica e repetição multiplicam o resultado.
-export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
-  exercicio: Pick<Exercicio, "base" | "nivel">; estado: EstadoTentativa; numeroTentativa: number;
+export function PainelPontuacao({ exercicio, estado, numeroTentativa, treino = false }: {
+  exercicio: Pick<Exercicio, "base" | "nivel">; estado: EstadoTentativa; numeroTentativa: number; treino?: boolean;
 }) {
-  const { componentes: c, pdr, final } = pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: numeroTentativa });
+  const { componentes: c, pdr, final } = pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: numeroTentativa, treino });
   const loc = estado.localizacao;
   const falhas = estado.verificacoes.filter((v) => v.resultado !== "passou").length;
   const maiorDica = estado.dicasUsadas.length ? Math.max(...estado.dicasUsadas) : 0;
@@ -85,6 +85,7 @@ export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
   if (maiorDica) linhas.push({ rotulo: `Dica ${maiorDica} usada`, valor: pct(1 - c.multiplicadorDica), tom: "perda" });
   if (c.multiplicadorRepeticao < 1) linhas.push({ rotulo: "Repetição do exercício", valor: pct(1 - c.multiplicadorRepeticao), tom: "perda" });
   if (c.desistiu) linhas.push({ rotulo: "Desistência", valor: "zera o PDR", tom: "perda" });
+  else if (c.treino) linhas.push({ rotulo: "Treino: exercício já resolvido", valor: "não conta pontos", tom: "neutro" });
 
   const cor = { ok: "text-sucesso", perda: "text-perigo", neutro: "text-texto-apagado" };
   return (
@@ -102,7 +103,8 @@ export function PainelPontuacao({ exercicio, estado, numeroTentativa }: {
         ))}
       </dl>
       <p className="mt-5 text-xs leading-5 text-texto-apagado">
-        {final ? `de ${exercicio.base} possíveis neste nível.` : "O máximo que ainda dá para fazer, se o próximo passo der certo."}
+        {c.treino ? "Você já resolveu este exercício: esta tentativa é treino e não soma pontos. Vale a nota da primeira resolução."
+          : final ? `de ${exercicio.base} possíveis neste nível.` : "O máximo que ainda dá para fazer, se o próximo passo der certo."}
       </p>
     </section>
   );

@@ -228,7 +228,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
 
         {ultimoVerificar && (
           <ResultadoDoVerificar resultado={ultimoVerificar} numero={estado.verificacoes.length}
-            pdrFinal={encerrada ? pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: tentativa.numero }).pdr : null} />
+            pdrFinal={encerrada ? pdrDoEstado(estado, { base: exercicio.base, numero_tentativa: tentativa.numero, treino: tentativa.treino }).pdr : null} />
         )}
 
         <BarraAcoes editorTravado={travado} aoPrecheck={rodarPrecheck} precheck={{
@@ -241,7 +241,7 @@ export function TelaExercicio({ tentativaId }: { tentativaId: string }) {
       </div>
 
       <aside className="flex flex-col gap-6">
-        <PainelPontuacao exercicio={exercicio} estado={estado} numeroTentativa={tentativa.numero} />
+        <PainelPontuacao exercicio={exercicio} estado={estado} numeroTentativa={tentativa.numero} treino={tentativa.treino} />
         {travado && <AvisoLocalizacao />}
         <PainelDicas situacoes={situacaoDasDicas(estado)} textos={textosDicas} pedindo={pedindoDica} aoPedir={pedirDica} />
       </aside>

@@ -26,12 +26,13 @@ export type LinhaExercicio = {
   codigo_com_defeito: string; assinatura: string; descricao: string;
   teste_exemplo: TesteExemplo;
   tema_codigo: string; nivel: string;
+  treino?: boolean;             // D-31: exercício já resolvido antes desta tentativa
 };
 
 export type DicaAberta = { nivel: number; texto: string };
 
 export type RespostaTentativa = {
-  tentativa: { id: string; numero: number; multiplicador_repeticao: number };
+  tentativa: { id: string; numero: number; multiplicador_repeticao: number; treino: boolean };
   estado: EstadoTentativa;
   dicas: DicaAberta[];          // só as já usadas nesta tentativa (RF-12)
   exercicio: {
@@ -46,7 +47,7 @@ export type RespostaTentativa = {
 export function montarResposta(l: LinhaExercicio, estado: EstadoTentativa, dicas: DicaAberta[] = []): RespostaTentativa {
   const nivel = ehNivel(l.nivel) ? l.nivel : "baixo";
   return {
-    tentativa: { id: l.tentativa_id, numero: l.numero_tentativa, multiplicador_repeticao: l.numero_tentativa > 1 ? 0.5 : 1 },
+    tentativa: { id: l.tentativa_id, numero: l.numero_tentativa, multiplicador_repeticao: l.numero_tentativa > 1 ? 0.5 : 1, treino: l.treino === true },
     estado,
     dicas: dicas.map((d) => ({ nivel: d.nivel, texto: d.texto })),
     exercicio: {

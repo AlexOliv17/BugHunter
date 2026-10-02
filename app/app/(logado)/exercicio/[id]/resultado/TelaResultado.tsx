@@ -15,7 +15,7 @@ import { Voltar } from "../../../Voltar";
 import { Caminho, PainelPontuacao } from "../componentes";
 
 type Resultado = {
-  desfecho: string; pdr_final: number; numero_tentativa: number;
+  desfecho: string; pdr_final: number; numero_tentativa: number; treino: boolean; ja_resolvido: boolean;
   exercicio: { assinatura: string; descricao: string; tema: string; nivel: Nivel; base: number };
   categoria: string; estado: EstadoTentativa; linha_do_tempo: MarcoDaLinhaDoTempo[];
   codigo_com_defeito: string; codigo_submetido: string; feedback: string | null;
@@ -102,7 +102,7 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
           <CodigosCompletos dados={dados} gabarito={gabarito} />
         </div>
         <aside className="flex flex-col gap-6">
-          <PainelPontuacao exercicio={dados.exercicio} estado={dados.estado} numeroTentativa={dados.numero_tentativa} />
+          <PainelPontuacao exercicio={dados.exercicio} estado={dados.estado} numeroTentativa={dados.numero_tentativa} treino={dados.treino} />
           <LinhaDoTempo marcos={dados.linha_do_tempo} />
         </aside>
       </div>
@@ -114,7 +114,7 @@ export function TelaResultado({ tentativaId }: { tentativaId: string }) {
         </button>
         <button type="button" onClick={() => abrir("refazer")} disabled={abrindo !== null}
           className="h-14 rounded border border-borda px-8 font-semibold transition-colors enabled:hover:border-texto-apagado disabled:opacity-60">
-          {abrindo === "refazer" ? "Abrindo…" : "Tentar este de novo (vale 50%)"}
+          {abrindo === "refazer" ? "Abrindo…" : dados.ja_resolvido ? "Tentar este de novo (treino, não pontua)" : "Tentar este de novo (vale 50%)"}
         </button>
       </div>
       {erroAbrir && <p role="alert" className="mt-3 text-sm text-perigo">{erroAbrir}</p>}
@@ -185,11 +185,11 @@ function CodigosCompletos({ dados, gabarito }: { dados: Resultado; gabarito: Gab
   return (
     <details className="rounded border border-borda bg-painel">
       <summary className="cursor-pointer px-8 py-4 text-sm font-semibold text-texto-secundario hover:text-texto">Ver os três códigos completos</summary>
-      <div className="grid grid-cols-3 gap-px border-t border-borda bg-borda">
+      <div className="grid grid-cols-1 gap-px border-t border-borda bg-borda min-[1500px]:grid-cols-3">
         {colunas.map(([titulo, codigo]) => (
           <div key={titulo} className="min-w-0 bg-painel p-4">
             <h3 className="mb-2 text-xs font-semibold tracking-wider text-texto-secundario">{titulo.toUpperCase()}</h3>
-            <pre className="overflow-x-auto font-mono text-xs leading-6">
+            <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-6">
               {codigo.split("\n").map((l, i) => (
                 <div key={i} className={i === gabarito.linha_defeito - 1 ? "bg-destaque/10" : undefined}>
                   <span className="mr-3 inline-block w-5 select-none text-right text-texto-apagado">{i + 1}</span>{l}

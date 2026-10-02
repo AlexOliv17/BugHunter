@@ -22,11 +22,15 @@ export type ComponentesPdr = {
   multiplicadorDica: number;       // do maior nível de dica usado
   multiplicadorRepeticao: number;  // 1,0 na primeira tentativa, 0,5 depois
   desistiu: boolean;               // RN-06: PDR 0
+  treino: boolean;                 // D-31: exercício já resolvido antes; PDR 0
 };
+
+// treino: repetição de um exercício já resolvido (D-31); a nota é a da 1ª resolvida
+export type OpcoesPdr = { base: number; numero_tentativa: number; treino?: boolean };
 
 const centesimos = (x: number) => Math.round(x * 100);
 
-export function componentesPdr(eventos: Evento[], { base, numero_tentativa }: { base: number; numero_tentativa: number }): ComponentesPdr {
+export function componentesPdr(eventos: Evento[], { base, numero_tentativa, treino = false }: OpcoesPdr): ComponentesPdr {
   const localizacoes: TentativaLocalizacao[] = [];
   let falhas = 0, maiorDica = 0, desistiu = false;
   for (const e of eventos) {
@@ -48,12 +52,13 @@ export function componentesPdr(eventos: Evento[], { base, numero_tentativa }: { 
     multiplicadorDica: MULTIPLICADOR_DICA[maiorDica as 0 | 1 | 2 | 3],
     multiplicadorRepeticao: numero_tentativa > 1 ? MULTIPLICADOR_REPETICAO.repeticao : MULTIPLICADOR_REPETICAO.primeira,
     desistiu,
+    treino,
   };
 }
 
 // Valor com os componentes dados, arredondado meio-para-cima (D-16).
 export function pdrDosComponentes(c: ComponentesPdr): number {
-  if (c.desistiu) return 0;
+  if (c.desistiu || c.treino) return 0;
   const numerador = c.base
     * (centesimos(PESO_LOCALIZACAO) * centesimos(c.fatorLocalizacao) + centesimos(PESO_REPARO) * centesimos(c.fatorReparo))
     * centesimos(c.multiplicadorDica) * centesimos(c.multiplicadorRepeticao);
@@ -61,7 +66,7 @@ export function pdrDosComponentes(c: ComponentesPdr): number {
   return Math.floor((2 * numerador + denominador) / (2 * denominador));
 }
 
-export function calcularPdr(eventos: Evento[], opcoes: { base: number; numero_tentativa: number }): number {
+export function calcularPdr(eventos: Evento[], opcoes: OpcoesPdr): number {
   return pdrDosComponentes(componentesPdr(eventos, opcoes));
 }
 
@@ -69,7 +74,7 @@ export function calcularPdr(eventos: Evento[], opcoes: { base: number; numero_te
 // Aberta: o máximo ainda possível, supondo que o próximo passo dê certo
 // (acertar a linha, se a localização não terminou; passar no próximo Verificar).
 // Encerrada: o PDR final, igual ao que o servidor gravou.
-export function pdrDoEstado(estado: EstadoTentativa, opcoes: { base: number; numero_tentativa: number }) {
+export function pdrDoEstado(estado: EstadoTentativa, opcoes: OpcoesPdr) {
   const eventos: Evento[] = estado.localizacao.tentativas.map((t) => ({ tipo: "localizou", payload: { ...t } }));
   if (!estado.localizacao.concluida && !estado.encerrada) eventos.push({ tipo: "localizou", payload: { correta: true } });
   for (const v of estado.verificacoes) eventos.push({ tipo: "verificar", payload: { ...v } });

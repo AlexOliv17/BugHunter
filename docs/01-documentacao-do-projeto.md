@@ -310,6 +310,8 @@ Desistir está disponível desde o início da tentativa, inclusive com o editor 
 
 Um exercício pode ser tentado quantas vezes o aluno quiser. Toda tentativa após a primeira aplica `multiplicador_repeticao = 0,5`, independentemente do desfecho da anterior.
 
+A nota do exercício é a da primeira tentativa resolvida (D-31). Enquanto ele não foi resolvido — as anteriores foram desistências —, a repetição pontua com o multiplicador 0,5. Depois de resolvido, toda nova tentativa é treino: pode ser feita, mas fecha com `pdr_final = 0`, e a tela avisa antes.
+
 ### RN-08 · Limite de edição
 
 O sistema conta as linhas alteradas em relação ao código original — o `codigo_com_defeito` que o aluno recebeu, nunca o `codigo_correto` — e exibe o contador, com alerta visual acima de 3 linhas. Na v1 o limite é informativo: não bloqueia nem penaliza. O número é registrado no evento `editou`.
@@ -534,8 +536,9 @@ Pontos que não haviam sido discutidos e foram resolvidos aqui. Merecem validaç
 | D-28 | Sair da conta | botão Sair no cabeçalho das telas logadas, que encerra a sessão e volta ao login; entra com o cabeçalho da S2-04 | não oferecer saída na v1, impedindo trocar de conta no mesmo navegador |
 | D-29 | "Próximo exercício" na tela final | outro exercício do mesmo tema e nível: a RN-09 aplicada excluindo o exercício recém-encerrado (tentativa aberta de outro exercício do nível; senão o não resolvido de menor `ordem`; senão o de menor `ordem`, valendo metade). Se o nível só tiver aquele exercício, ele é reaberto | voltar à escolha de nível, ou aplicar a RN-09 sem exclusão, que reabriria o mesmo exercício depois de uma desistência |
 | D-30 | Navegação entre telas | botão Voltar em todas as telas logadas exceto Temas, para a tela anterior na hierarquia: nível → Temas; exercício → nível; resultado → nível (o exercício encerrado redirecionaria ao resultado). A marca BugHunter no cabeçalho leva sempre a Temas | depender do botão voltar do navegador |
+| D-31 | Pontuação de quem refaz um exercício já resolvido | a nota do exercício é a da primeira tentativa resolvida: depois dela, refazer é treino e fecha com `pdr_final = 0`. Antes de resolver, a repetição vale 0,5 (RN-07). O botão de refazer continua disponível e diz qual dos dois casos se aplica | cada repetição somar mais 50% do PDR, o que permitiria acumular pontos refazendo o mesmo exercício |
 
-D-12 foi revista e D-16 a D-28 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2. D-29 e D-30 foram decididas pelo P.O. na validação da sprint 5.
+D-12 foi revista e D-16 a D-28 foram acrescentadas pelo P.O. na revisão da especificação da versão 1.2. D-29 a D-31 foram decididas pelo P.O. na validação da sprint 5.
 
 ## 10. Riscos
 
